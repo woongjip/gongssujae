@@ -310,7 +310,7 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div style={{padding:"12px 16px 16px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
+          <div style={{padding:"12px 16px 80px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
             <button onClick={()=>openChat(selItem.id,selItem.title)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:17,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
               <i className="ti ti-message-circle" style={{fontSize:24}}/>판매자와 채팅하기
             </button>
@@ -325,12 +325,12 @@ export default function App() {
             <button onClick={()=>go("home","home")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
             <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
           </div>
-          <div style={{flex:1,overflowY:"auto",padding:16}}>
+          <div style={{flex:1,overflowY:"auto",padding:16,paddingBottom:80}}>
             <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:16}}><div style={{width:52,height:52,borderRadius:14,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{selJob.icon}</div><div><div style={{display:"flex",gap:6,marginBottom:4}}>{jbadge(selJob.type)}</div><div style={{fontSize:17,fontWeight:500}}>{selJob.title}</div></div></div>
             {[["단체",selJob.org],["지역",selJob.location],["기간",selJob.date],["보수",selJob.pay]].map(([k,v])=>(<div key={k} style={{display:"flex",padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><span style={{fontSize:13,color:"#aaa",width:48}}>{k}</span><span style={{fontSize:13,fontWeight:k==="보수"?500:400,color:k==="보수"?ACCENT:"#1a1a1a"}}>{v}</span></div>))}
             <div style={{marginTop:16,padding:14,background:"#fafafa",borderRadius:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selJob.desc}</p></div>
           </div>
-          <div style={{padding:"12px 16px 16px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
+          <div style={{padding:"12px 16px 80px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
             <button onClick={()=>openChat(selJob.id,selJob.title)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:17,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><i className="ti ti-message-circle" style={{fontSize:24}}/>지원 / 문의 채팅</button>
           </div>
         </div>
