@@ -88,7 +88,7 @@ export default function App() {
 
   const go=(s,b)=>{setScreen(s);if(b!==undefined)setBtab(b);};
   function goDetail(item){scrollPos.current=listRef.current?.scrollTop||0;setSelItem(item);go("detail");}
-  function openChat(id,label){setActiveChat(id);setChatLabel(label);go("chat","chatlist");if(!chatList.find(c=>c.id===id))setChatList(p=>[...p,{id,label}]);if(!chats[id])setChats(p=>({...p,[id]:[])));}
+  function openChat(id,label){setActiveChat(id);setChatLabel(label);go("chat","chatlist");if(!chatList.find(c=>c.id===id))setChatList(p=>[...p,{id,label}]);if(!chats[id])setChats(p=>({...p,[id]:[]}));}
   function sendMsg(){if(!chatMsg.trim())return;setChats(p=>({...p,[activeChat]:[...(p[activeChat]||[]),{from:"me",text:chatMsg}]}));setChatMsg("");}
   function allTerms(v){setTerms({all:v,service:v,privacy:v,age:v});}
   function toggleCat(c){setForm(p=>({...p,category:p.category.includes(c)?p.category.filter(x=>x!==c):[...p.category,c]}));}
