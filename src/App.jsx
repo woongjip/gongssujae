@@ -154,7 +154,7 @@ export default function App() {
           ))}
         </div>
         <input value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="인증번호 4자리" type="tel" style={{...inp,textAlign:"center",fontSize:20,letterSpacing:12,marginBottom:12}}/>
-        <button onClick={()=>{if(code.length===4)setAuthStep("terms");}} style={{width:"100%",height:48,borderRadius:12,border:"none",background:code.length===4?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:12}}>확인</button>
+        <button onClick={()=>setAuthStep("terms")} style={{width:"100%",height:48,borderRadius:12,border:"none",background:code.length===4?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:12}}>확인</button>
         <button style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>인증번호 재발송</button>
       </div>
     );
