@@ -243,7 +243,7 @@ export default function App() {
                   </div>
                   <div style={{fontSize:11,color:"#bbb",marginTop:4}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{item.region}</div>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:5}}>
-                    <span style={{fontSize:13,fontWeight:500,color:item.price===0?ACCENT:"#1a1a1a"}}>{item.price===0?"무료 나눔":`${item.price.toLocaleString()}원`}</span>
+                    <span style={{fontSize:13,fontWeight:500,color:item.price===0&&item.postType!=="guhami"?ACCENT:"#1a1a1a"}}>{item.postType==="guhami"?(item.price===0?"가격 협의":`예산 ${item.price.toLocaleString()}원`):(item.price===0?"무료 나눔":`${item.price.toLocaleString()}원`)}</span>
                     <span style={{fontSize:10,color:"#ccc"}}><i className="ti ti-heart" style={{fontSize:11,verticalAlign:-1,marginRight:2}}/>{item.likes+(likes[item.id]?1:0)}</span>
                   </div>
                 </div>
@@ -292,7 +292,7 @@ export default function App() {
                   <div style={{fontSize:18,fontWeight:500}}>{selItem.title}</div>
                   <div style={{fontSize:11,color:"#bbb",marginTop:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{selItem.region}</div>
                 </div>
-                <span style={{fontSize:16,fontWeight:500,color:selItem.price===0?ACCENT:"#1a1a1a",marginLeft:8,whiteSpace:"nowrap"}}>{selItem.price===0?"무료 나눔":`${selItem.price.toLocaleString()}원`}</span>
+                <span style={{fontSize:16,fontWeight:500,color:selItem.price===0&&selItem.postType!=="guhami"?ACCENT:"#1a1a1a",marginLeft:8,whiteSpace:"nowrap"}}>{selItem.postType==="guhami"?(selItem.price===0?"가격 협의":`예산 ${selItem.price.toLocaleString()}원`):(selItem.price===0?"무료 나눔":`${selItem.price.toLocaleString()}원`)}</span>
               </div>
               {selItem.sellerId===MY_ID&&(
                 <div style={{display:"flex",gap:6,marginBottom:14}}>
