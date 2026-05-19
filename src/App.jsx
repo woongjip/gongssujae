@@ -30,7 +30,7 @@ const initChats = {
 const emptyForm = {title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",photos:[],status:"selling"};
 
 export default function App() {
-  const [loggedIn,setLoggedIn]=useState(false);
+  const [loggedIn,setLoggedIn]=useState(true); // TODO: 개발 완료 후 false 로 변경
   const [aStep,setAStep]=useState("splash");
   const [aMode,setAMode]=useState("phone");
   const [aInput,setAInput]=useState("");
