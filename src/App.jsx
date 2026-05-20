@@ -1,18 +1,19 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 
-const ACCENT = "#2D6A4F", LIGHT = "#f0f7f4", MID = "#52b788";
-const ITEM_CATS_ALL = ["세트","소품","의상","장비","기타"];
-const ITEM_CATS = ["전체",...ITEM_CATS_ALL];
-const JOB_FIELDS = ["전체","조명","무대","음향","분장","영상","기타"];
-const INTERESTS = ["조명","무대","음향","분장","의상","소품","연출","기획","배우","스태프"];
-const REGIONS = ["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 광진구","서울 동대문구","서울 중랑구","서울 성북구","서울 강북구","서울 도봉구","서울 노원구","서울 은평구","서울 서대문구","서울 마포구","서울 양천구","서울 강서구","서울 구로구","서울 금천구","서울 영등포구","서울 동작구","서울 관악구","서울 서초구","서울 강남구","서울 송파구","서울 강동구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","대구 중구","대구 동구","대구 서구","대구 남구","대구 북구","인천 중구","인천 동구","인천 미추홀구","인천 연수구","인천 남동구","광주 동구","광주 서구","광주 남구","광주 북구","대전 동구","대전 중구","대전 서구","대전 유성구","울산 중구","울산 남구","울산 동구","울산 북구","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안산시","경기 안양시","경기 남양주시","경기 화성시","경기 의정부시"];
-const ST = { selling:{label:"판매중",bg:"#e8f5e9",color:"#2e7d32"}, reserved:{label:"예약중",bg:"#fff3e0",color:"#e65100"}, done:{label:"거래완료",bg:"#f5f5f5",color:"#9e9e9e"} };
-const JS = { done:{label:"완료",bg:"#f5f5f5",color:"#9e9e9e"} };
-const PT = { nanuми:{label:"나누미",bg:"#e8f4fd",color:"#1565c0"}, guhami:{label:"구하미",bg:"#fce4ec",color:"#c62828"} };
-const JT = { guin:{label:"구인",bg:"#e8f4fd",color:"#1565c0"}, gujik:{label:"구직",bg:"#f3e5f5",color:"#6a1b9a"} };
-const MY_ID = "me";
+const ACCENT="#2D6A4F",LIGHT="#f0f7f4",MID="#52b788";
+const ITEM_CATS_ALL=["세트","소품","의상","장비","기타"];
+const ITEM_CATS=["전체",...ITEM_CATS_ALL];
+const JOB_FIELDS=["전체","조명","무대","음향","분장","영상","기타"];
+const INTERESTS=["조명","무대","음향","분장","의상","소품","연출","기획","배우","스태프"];
+const REGIONS=["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 광진구","서울 동대문구","서울 중랑구","서울 성북구","서울 강북구","서울 도봉구","서울 노원구","서울 은평구","서울 서대문구","서울 마포구","서울 양천구","서울 강서구","서울 구로구","서울 금천구","서울 영등포구","서울 동작구","서울 관악구","서울 서초구","서울 강남구","서울 송파구","서울 강동구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","대구 중구","대구 동구","대구 서구","인천 중구","인천 동구","인천 미추홀구","인천 연수구","광주 동구","광주 서구","광주 남구","광주 북구","대전 동구","대전 중구","대전 서구","대전 유성구","울산 중구","울산 남구","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안양시","경기 남양주시"];
 
-const initItems = [
+// 상태 배지 정의
+const ST={reserved:{label:"예약중",bg:"#fff3e0",color:"#e65100"},done:{label:"거래완료",bg:"#f5f5f5",color:"#9e9e9e"}};
+const PT={guhami:{label:"구하미",bg:"#fce4ec",color:"#c62828"}};
+const JT={gujik:{label:"구직",bg:"#f3e5f5",color:"#6a1b9a"}};
+const MY_ID="me";
+
+const initItems=[
   {id:1,title:"빨간 드레스 (2벌)",category:["소품","의상"],itemName:"빨간 드레스",price:0,photos:[],emoji:"🎭",desc:"공연 종료 후 남은 빨간 드레스 2벌. 사이즈 S/M. 세탁 완료.",seller:"극단 파도",sellerId:"user1",si:"파",likes:12,region:"서울 종로구",contact:"010-****-1234",safeNum:false,tradePlace:"대학로 마로니에공원 앞",status:"selling",postType:"nanumi"},
   {id:2,title:"소형 스팟 조명 x3",category:["장비"],itemName:"스팟 조명",price:15000,photos:[],emoji:"💡",desc:"전시 철수 후 남은 LED 스팟 조명 3개. 상태 양호.",seller:"아트스페이스 을지",sellerId:"user2",si:"을",likes:8,region:"서울 중구",contact:"안심번호",safeNum:true,tradePlace:"을지로 3가역 2번 출구",status:"reserved",postType:"nanumi"},
   {id:3,title:"나무 의자 세트 (6개)",category:["세트"],itemName:"나무 의자",price:0,photos:[],emoji:"🪑",desc:"무대 소품용 나무 의자 6개. 픽업 가능.",seller:"극단 숲",sellerId:"user3",si:"숲",likes:21,region:"서울 종로구",contact:"010-****-9012",safeNum:false,tradePlace:"대학로 소극장 앞",status:"done",postType:"nanumi"},
@@ -20,27 +21,28 @@ const initItems = [
   {id:5,title:"조명 장비 급구합니다",category:["장비"],itemName:"LED 조명",price:0,photos:[],emoji:"🔦",desc:"다음주 공연에 쓸 소형 LED 조명 2개 구합니다. 단기 대여도 가능.",seller:"문화공간 노들",sellerId:"user5",si:"노",likes:3,region:"서울 동작구",contact:"010-****-7890",safeNum:false,tradePlace:"노들섬 내부",status:"selling",postType:"guhami"},
   {id:6,title:"무대 음향 장비 세트",category:["장비"],itemName:"음향 장비",price:50000,photos:[],emoji:"🎧",desc:"믹서, 스피커, 마이크 포함.",seller:"극단 파도",sellerId:MY_ID,si:"나",likes:17,region:"서울 중구",contact:"010-****-2345",safeNum:false,tradePlace:"을지로 입구역 근처",status:"selling",postType:"nanumi"},
 ];
-const initJobs = [
-  {id:101,title:"조명 디자이너 구합니다",field:"조명",type:"단기",org:"극단 파도",pay:"협의",date:"2025.06.14~06.28",desc:"소극장 연극 조명 설계 및 현장 운영.",location:"대학로",icon:"💡",jobType:"guin",sellerId:"user1",jobStatus:"active"},
+const initJobs=[
+  {id:101,title:"조명 디자이너 구합니다",field:"조명",type:"단기",org:"극단 파도",pay:"협의",date:"2025.06.14~06.28",desc:"소극장 연극 조명 설계 및 현장 운영. 경력 2년 이상 우대.",location:"대학로",icon:"💡",jobType:"guin",sellerId:"user1",jobStatus:"active"},
   {id:102,title:"무대 세트 제작 스태프",field:"무대",type:"단기",org:"아트스페이스 을지",pay:"일 80,000원",date:"2025.06.10~06.13",desc:"전시 오픈 전 세트 설치 및 철수 보조.",location:"을지로",icon:"🏗️",jobType:"guin",sellerId:"user2",jobStatus:"done"},
-  {id:103,title:"음향 엔지니어 구직합니다",field:"음향",type:"장기",org:"홍길동",pay:"협의",date:"2025.07~",desc:"공연장 음향 엔지니어 경력 5년. 콘솔 운용 가능. 장기 포지션 희망.",location:"서울 전체",icon:"🎧",jobType:"gujik",sellerId:"user3",jobStatus:"active"},
+  {id:103,title:"음향 엔지니어 구직합니다",field:"음향",type:"장기",org:"홍길동",pay:"협의",date:"2025.07~",desc:"공연장 음향 엔지니어 경력 5년. 장기 포지션 희망.",location:"서울 전체",icon:"🎧",jobType:"gujik",sellerId:"user3",jobStatus:"active"},
   {id:104,title:"분장 아티스트 섭외",field:"분장",type:"단기",org:"무용단 봄",pay:"회당 150,000원",date:"2025.06.20~06.22",desc:"현대무용 공연 분장. 퍼포머 8명.",location:"마포구",icon:"💄",jobType:"guin",sellerId:MY_ID,jobStatus:"active"},
 ];
-const initChats = {
+const initChats={
   1:[{from:"other",text:"안녕하세요! 드레스 아직 남아있나요?"},{from:"me",text:"네, 아직 있어요!"}],
   101:[{from:"other",text:"조명 디자이너 공고 관련해서 문의드려요."}],
 };
-const emptyForm = {title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",photos:[],status:"selling",postType:"nanumi"};
+const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",photos:[],status:"selling",postType:"nanumi"};
+const emptyJform={title:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
-export default function App() {
-  const [loggedIn,setLoggedIn]=useState(true); // TODO: 개발 완료 후 false 로 변경
+export default function App(){
+  // ── 상태 선언 ──
+  const [loggedIn,setLoggedIn]=useState(true); // TODO: 개발 완료 후 false로 변경
   const [aStep,setAStep]=useState("splash");
   const [aMode,setAMode]=useState("phone");
   const [aInput,setAInput]=useState("");
   const [verCode,setVerCode]=useState("");
   const [terms,setTerms]=useState({all:false,service:false,privacy:false,age:false});
   const [prof,setProf]=useState({phone:"",address:"",affiliation:"",interests:[]});
-
   const [screen,setScreen]=useState("home");
   const [mainTab,setMainTab]=useState("items");
   const [btab,setBtab]=useState("home");
@@ -64,9 +66,10 @@ export default function App() {
   const [newKwd,setNewKwd]=useState("");
   const [rSearch,setRSearch]=useState("");
   const [showR,setShowR]=useState(false);
+  const [editItem,setEditItem]=useState(null);
   const [editJob,setEditJob]=useState(null);
   const [form,setForm]=useState(emptyForm);
-  const [jform,setJform]=useState({title:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:""});
+  const [jform,setJform]=useState(emptyJform);
 
   const listRef=useRef(null);
   const scrollPos=useRef(0);
@@ -89,53 +92,65 @@ export default function App() {
   },[jobs,fld,q]);
   const filtR=useMemo(()=>REGIONS.filter(r=>r.includes(rSearch)),[rSearch]);
 
+  // ── 헬퍼 함수 ──
   const go=(s,b)=>{setScreen(s);if(b!==undefined)setBtab(b);};
+  const goHome=()=>go("home","home");
+
   function goDetail(item){scrollPos.current=listRef.current?.scrollTop||0;setSelItem(item);go("detail");}
-  function openChat(id,label){setActiveChat(id);setChatLabel(label);go("chat","chatlist");if(!chatList.find(c=>c.id===id))setChatList(p=>[...p,{id,label}]);if(!chats[id])setChats(p=>({...p,[id]:[]}));}
+  function openChat(id,label){
+    setActiveChat(id);setChatLabel(label);go("chat","chatlist");
+    if(!chatList.find(c=>c.id===id))setChatList(p=>[...p,{id,label}]);
+    if(!chats[id])setChats(p=>({...p,[id]:[]}));
+  }
   function sendMsg(){if(!chatMsg.trim())return;setChats(p=>({...p,[activeChat]:[...(p[activeChat]||[]),{from:"me",text:chatMsg}]}));setChatMsg("");}
   function allTerms(v){setTerms({all:v,service:v,privacy:v,age:v});}
   function toggleCat(c){setForm(p=>({...p,category:p.category.includes(c)?p.category.filter(x=>x!==c):[...p.category,c]}));}
   function handlePhotos(e){Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>setForm(p=>({...p,photos:[...p.photos,ev.target.result]}));r.readAsDataURL(file);});}
+
   function submitItem(){
     if(!form.title)return;
-    const ni={id:editItem?editItem.id:Date.now(),...form,price:form.price?parseInt(form.price):0,seller:prof.affiliation||"나",sellerId:MY_ID,si:"나",likes:editItem?editItem.likes:0,emoji:form.photos.length===0?"📦":null};
+    const ni={...(editItem||{}),id:editItem?editItem.id:Date.now(),...form,price:form.price?parseInt(form.price):0,seller:prof.affiliation||"나",sellerId:MY_ID,si:"나",likes:editItem?.likes||0,emoji:form.photos.length===0?"📦":null};
     if(editItem){setItems(p=>p.map(i=>i.id===editItem.id?ni:i));setSelItem(ni);}
     else setItems(p=>[ni,...p]);
-    const dest=editItem?"detail":"home";
     setEditItem(null);setForm(emptyForm);setPosted(true);
-    setTimeout(()=>{setPosted(false);go(dest,dest==="home"?"home":undefined);},1200);
+    setTimeout(()=>{setPosted(false);go(editItem?"detail":"home",editItem?undefined:"home");},1200);
   }
-  function startEdit(item){setForm({title:item.title,category:item.category,itemName:item.itemName||"",price:item.price.toString(),desc:item.desc,region:item.region,contact:item.contact,safeNum:item.safeNum,tradePlace:item.tradePlace,photos:item.photos||[],status:item.status});setEditItem(item);setPostMode("item");go("post","post");}
+  function startEdit(item){setForm({title:item.title,category:item.category,itemName:item.itemName||"",price:item.price.toString(),desc:item.desc,region:item.region,contact:item.contact,safeNum:item.safeNum,tradePlace:item.tradePlace,photos:item.photos||[],status:item.status,postType:item.postType||"nanumi"});setEditItem(item);setPostMode("item");go("post","post");}
   function changeStatus(id,s){setItems(p=>p.map(i=>i.id===id?{...i,status:s}:i));setSelItem(p=>p?{...p,status:s}:p);}
+
   function submitJob(){
     if(!jform.title)return;
     const nj={id:editJob?editJob.id:Date.now(),...jform,org:editJob?editJob.org:(prof.affiliation||"나"),icon:editJob?editJob.icon:"📋",sellerId:MY_ID};
-    if(editJob) setJobs(p=>p.map(j=>j.id===editJob.id?nj:j));
+    if(editJob)setJobs(p=>p.map(j=>j.id===editJob.id?nj:j));
     else setJobs(p=>[nj,...p]);
-    setJform({title:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"});
-    setEditJob(null);
-    setPosted(true); setTimeout(()=>{setPosted(false);setMainTab("jobs");go("home","home");},1200);
+    setEditJob(null);setJform(emptyJform);setPosted(true);
+    setTimeout(()=>{setPosted(false);setMainTab("jobs");goHome();},1200);
   }
-  function startEditJob(job){
-    setJform({title:job.title,field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});
-    setEditJob(job); setPostMode("job"); go("post","post");
-  }
+  function startEditJob(job){setJform({title:job.title,field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});setEditJob(job);setPostMode("job");go("post","post");}
   function changeJobStatus(id,s){setJobs(p=>p.map(j=>j.id===id?{...j,jobStatus:s}:j));setSelJob(p=>p?{...p,jobStatus:s}:p);}
 
+  // ── 스타일/배지 헬퍼 ──
   const inp={width:"100%",borderRadius:10,border:"0.5px solid #e0e0e0",padding:"10px 12px",fontSize:14,boxSizing:"border-box",outline:"none"};
   const chip=(label,active,fn)=>(<button key={label} onClick={fn} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:active?ACCENT:"#e0e0e0",background:active?ACCENT:"#fff",color:active?"#fff":"#555",fontSize:12,cursor:"pointer",fontWeight:active?500:400}}>{label}</button>);
-  const jbadge=(t)=>(<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:t==="장기"?"#e8f4fd":"#fff3e0",color:t==="장기"?"#1565c0":"#e65100",fontWeight:500}}>{t}</span>);
-  const stBadge=(s)=>{const v=ST[s]||ST.selling;return <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:v.bg,color:v.color,fontWeight:500}}>{v.label}</span>;};
-  const ptBadge=(p)=>{const v=PT[p]||PT.nanumi;return <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:v.bg,color:v.color,fontWeight:500}}>{v.label}</span>;};
-  const jtBadge=(j)=>{const v=JT[j]||JT.guin;return <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:v.bg,color:v.color,fontWeight:500}}>{v.label}</span>;};
-  const jsBadge=()=><span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:JS.done.bg,color:JS.done.color,fontWeight:500}}>{JS.done.label}</span>;
   const tb=(t)=>({flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",cursor:"pointer",fontSize:11,color:btab===t?ACCENT:"#aaa",fontWeight:btab===t?500:400,border:"none",background:"none"});
   const tic=(t)=>({fontSize:22,color:btab===t?ACCENT:"#bbb"});
+  const mkBadge=(label,bg,color)=>(<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:bg,color,fontWeight:500}}>{label}</span>);
+  // 배지 규칙: 판매중·나누미·구인·진행중 = 표시 안함. 나머지만 표시
+  const itemBadges=(item)=>[
+    item.postType==="guhami"&&mkBadge("구하미","#fce4ec","#c62828"),
+    item.status==="reserved"&&mkBadge("예약중","#fff3e0","#e65100"),
+    item.status==="done"&&mkBadge("거래완료","#f5f5f5","#9e9e9e"),
+  ].filter(Boolean);
+  const jobBadges=(job)=>[
+    job.jobType==="gujik"&&mkBadge("구직","#f3e5f5","#6a1b9a"),
+    job.jobStatus==="done"&&mkBadge("완료","#f5f5f5","#9e9e9e"),
+  ].filter(Boolean);
+  const jbadge=(t)=>mkBadge(t,t==="장기"?"#e8f4fd":"#fff3e0",t==="장기"?"#1565c0":"#e65100");
 
-  // ── AUTH ──
+  // ── AUTH 화면 ──
   if(!loggedIn){
-    const wrap=(children)=>(<div style={{maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,padding:24,boxSizing:"border-box",display:"flex",flexDirection:"column"}}>{children}</div>);
-    const backBtn=(to)=>(<button onClick={()=>setAStep(to)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555",marginBottom:20,alignSelf:"flex-start"}}><i className="ti ti-arrow-left"/></button>);
+    const wrap=ch=>(<div style={{maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,padding:24,boxSizing:"border-box",display:"flex",flexDirection:"column"}}>{ch}</div>);
+    const backBtn=to=>(<button onClick={()=>setAStep(to)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555",marginBottom:20,alignSelf:"flex-start"}}><i className="ti ti-arrow-left"/></button>);
 
     if(aStep==="splash") return(
       <div style={{maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,boxSizing:"border-box"}}>
@@ -146,7 +161,6 @@ export default function App() {
         <button onClick={()=>setAStep("login")} style={{width:"100%",height:50,borderRadius:14,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:15,fontWeight:500,cursor:"pointer"}}>이미 계정이 있어요</button>
       </div>
     );
-
     if(aStep==="login") return wrap(<>
       {backBtn("splash")}
       <div style={{fontSize:22,fontWeight:600,marginBottom:6}}>안녕하세요!</div>
@@ -157,7 +171,6 @@ export default function App() {
       <input value={aInput} onChange={e=>setAInput(e.target.value)} placeholder={aMode==="phone"?"010-0000-0000":"이메일 주소"} type={aMode==="phone"?"tel":"email"} style={{...inp,marginBottom:12}}/>
       <button onClick={()=>{if(aInput.length>=6)setAStep("verify");}} style={{width:"100%",height:48,borderRadius:12,border:"none",background:aInput.length>=6?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer"}}>인증번호 받기</button>
     </>);
-
     if(aStep==="verify") return wrap(<>
       {backBtn("login")}
       <div style={{fontSize:22,fontWeight:600,marginBottom:6}}>인증번호 입력</div>
@@ -169,7 +182,6 @@ export default function App() {
       <button onClick={()=>setAStep("terms")} style={{width:"100%",height:48,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:10}}>확인</button>
       <button style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>인증번호 재발송</button>
     </>);
-
     if(aStep==="terms") return wrap(<>
       <div style={{fontSize:20,fontWeight:600,marginBottom:4}}>약관 동의</div>
       <div style={{fontSize:13,color:"#999",marginBottom:18}}>서비스 이용을 위해 약관에 동의해주세요</div>
@@ -190,22 +202,14 @@ export default function App() {
       </div>
       <button onClick={()=>{if(terms.service&&terms.privacy&&terms.age)setAStep("profile");}} style={{width:"100%",height:48,borderRadius:12,border:"none",background:(terms.service&&terms.privacy&&terms.age)?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginTop:12}}>다음</button>
     </>);
-
     if(aStep==="profile") return wrap(<>
       <div style={{fontSize:20,fontWeight:600,marginBottom:4}}>프로필 등록</div>
       <div style={{fontSize:13,color:"#999",marginBottom:18}}>더 나은 서비스를 위해 입력해주세요 (선택)</div>
       <div style={{flex:1,overflowY:"auto"}}>
-        {[{l:"전화번호",k:"phone",ph:"010-0000-0000",t:"tel"},{l:"주소",k:"address",ph:"예: 서울 마포구"},{l:"소속",k:"affiliation",ph:"예: 극단 파도"}].map(f=>(
-          <div key={f.k} style={{marginBottom:14}}>
-            <div style={{fontSize:12,color:"#666",marginBottom:5,fontWeight:500}}>{f.l}</div>
-            <input value={prof[f.k]} onChange={e=>setProf(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} type={f.t||"text"} style={inp}/>
-          </div>
-        ))}
+        {[{l:"전화번호",k:"phone",ph:"010-0000-0000",t:"tel"},{l:"주소",k:"address",ph:"예: 서울 마포구"},{l:"소속",k:"affiliation",ph:"예: 극단 파도"}].map(f=>(<div key={f.k} style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:5,fontWeight:500}}>{f.l}</div><input value={prof[f.k]} onChange={e=>setProf(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} type={f.t||"text"} style={inp}/></div>))}
         <div style={{marginBottom:14}}>
           <div style={{fontSize:12,color:"#666",marginBottom:8,fontWeight:500}}>관심 분야 (복수 선택)</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-            {INTERESTS.map(i=>{const a=prof.interests.includes(i);return(<button key={i} onClick={()=>setProf(p=>({...p,interests:a?p.interests.filter(x=>x!==i):[...p.interests,i]}))} style={{padding:"6px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:13,cursor:"pointer"}}>{i}</button>);})}
-          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{INTERESTS.map(i=>{const a=prof.interests.includes(i);return(<button key={i} onClick={()=>setProf(p=>({...p,interests:a?p.interests.filter(x=>x!==i):[...p.interests,i]}))} style={{padding:"6px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:13,cursor:"pointer"}}>{i}</button>);})}</div>
         </div>
       </div>
       <div style={{display:"flex",gap:8,marginTop:12}}>
@@ -215,11 +219,11 @@ export default function App() {
     </>);
   }
 
-  // ── MAIN APP ──
+  // ── 메인 앱 ──
   return(
     <div style={{maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",position:"relative",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,display:"flex",flexDirection:"column"}}>
 
-      {/* HOME */}
+      {/* ── 홈 ── */}
       {screen==="home"&&(
         <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
           <div style={{padding:"18px 16px 0",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
@@ -240,132 +244,158 @@ export default function App() {
             {mainTab==="items"?ITEM_CATS.map(c=>chip(c,cat===c,()=>setCat(c))):JOB_FIELDS.map(f=>chip(f,fld===f,()=>setFld(f)))}
           </div>
           <div ref={listRef} style={{flex:1,overflowY:"auto",paddingBottom:64}}>
-            {mainTab==="items"&&filtItems.map(item=>(
-              <div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer",opacity:item.status==="done"?0.55:1}}>
-                <div style={{width:80,height:80,borderRadius:12,flexShrink:0,overflow:"hidden",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  {item.photos&&item.photos.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:30}}>{item.emoji||"📦"}</span>}
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,fontWeight:500,color:"#1a1a1a",lineHeight:1.3,marginBottom:4}}>{item.title}</div>
-                      <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-                        {stBadge(item.status)}
-                        {item.category.map(c=><span key={c} style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#f0f0f0",color:"#888"}}>{c}</span>)}
-                      </div>
-                    </div>
-                    <button onClick={e=>{e.stopPropagation();setLikes(p=>({...p,[item.id]:!p[item.id]}));}} style={{background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:6,flexShrink:0}}><i className="ti ti-heart" style={{fontSize:18,color:likes[item.id]?"#e25":"#ddd"}}/></button>
+            {mainTab==="items"&&filtItems.map(item=>{
+              const badges=itemBadges(item);
+              return(
+                <div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer",opacity:item.status==="done"?0.55:1}}>
+                  <div style={{width:80,height:80,borderRadius:12,flexShrink:0,overflow:"hidden",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:30}}>{item.emoji||"📦"}</span>}
                   </div>
-                  <div style={{fontSize:11,color:"#bbb",marginTop:4}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{item.region}</div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:5}}>
-                    <span style={{fontSize:13,fontWeight:500,color:item.price===0&&item.postType!=="guhami"?ACCENT:"#1a1a1a"}}>{item.postType==="guhami"?(item.price===0?"가격 협의":`예산 ${item.price.toLocaleString()}원`):(item.price===0?"무료 나눔":`${item.price.toLocaleString()}원`)}</span>
-                    <span style={{fontSize:10,color:"#ccc"}}><i className="ti ti-heart" style={{fontSize:11,verticalAlign:-1,marginRight:2}}/>{item.likes+(likes[item.id]?1:0)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {mainTab==="jobs"&&filtJobs.map(job=>(
-              <div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");}} style={{padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}>
-                <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                  <div style={{width:44,height:44,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{job.icon}</div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>{jtBadge(job.jobType)}{jbadge(job.type)}{job.jobStatus==="done"&&jsBadge()}<span style={{fontSize:11,color:"#bbb"}}>{job.field}</span></div>
-                    <div style={{fontSize:14,fontWeight:500,marginBottom:2}}>{job.title}</div>
-                    <div style={{fontSize:12,color:"#888"}}>{job.org} · {job.location}</div>
-                    <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}><span style={{fontSize:12,color:ACCENT,fontWeight:500}}>{job.pay}</span><span style={{fontSize:11,color:"#bbb"}}>{job.date}</span></div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,fontWeight:500,color:"#1a1a1a",lineHeight:1.3,marginBottom:4}}>{item.title}</div>
+                        {badges.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:2}}>{badges}</div>}
+                      </div>
+                      <button onClick={e=>{e.stopPropagation();setLikes(p=>({...p,[item.id]:!p[item.id]}));}} style={{background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:6,flexShrink:0}}><i className="ti ti-heart" style={{fontSize:18,color:likes[item.id]?"#e25":"#ddd"}}/></button>
+                    </div>
+                    <div style={{fontSize:11,color:"#bbb",marginTop:2}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{item.region}</div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:5}}>
+                      <span style={{fontSize:13,fontWeight:500,color:item.price===0&&item.postType!=="guhami"?ACCENT:"#1a1a1a"}}>
+                        {item.postType==="guhami"?(item.price===0?"가격 협의":`예산 ${item.price.toLocaleString()}원`):(item.price===0?"무료 나눔":`${item.price.toLocaleString()}원`)}
+                      </span>
+                      <span style={{fontSize:10,color:"#ccc"}}><i className="ti ti-heart" style={{fontSize:11,verticalAlign:-1,marginRight:2}}/>{item.likes+(likes[item.id]?1:0)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {mainTab==="jobs"&&filtJobs.map(job=>{
+              const badges=jobBadges(job);
+              return(
+                <div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");}} style={{padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1}}>
+                  <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                    <div style={{width:44,height:44,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{job.icon}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>{jbadge(job.type)}{badges.map((b,i)=>(<span key={i}>{b}</span>))}<span style={{fontSize:11,color:"#bbb"}}>{job.field}</span></div>
+                      <div style={{fontSize:14,fontWeight:500,marginBottom:2}}>{job.title}</div>
+                      <div style={{fontSize:12,color:"#888"}}>{job.org} · {job.location}</div>
+                      <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}><span style={{fontSize:12,color:ACCENT,fontWeight:500}}>{job.pay}</span><span style={{fontSize:11,color:"#bbb"}}>{job.date}</span></div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
             {((mainTab==="items"&&filtItems.length===0)||(mainTab==="jobs"&&filtJobs.length===0))&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>검색 결과가 없습니다</div>}
           </div>
         </div>
       )}
 
-      {/* ITEM DETAIL */}
-      {screen==="detail"&&selItem&&(
-        <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-          <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={()=>go("home","home")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
-              <span style={{fontWeight:500,fontSize:15}}>물건 상세</span>
+      {/* ── 물건 상세 ── */}
+      {screen==="detail"&&selItem&&(()=>{
+        const badges=itemBadges(selItem);
+        return(
+          <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+            <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>물건 상세</span></div>
+              {selItem.sellerId===MY_ID&&<button onClick={()=>startEdit(selItem)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
             </div>
-            {selItem.sellerId===MY_ID&&<button onClick={()=>startEdit(selItem)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
-          </div>
-          <div style={{flex:1,overflowY:"auto"}}>
-            <div style={{height:220,background:LIGHT,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {selItem.photos&&selItem.photos.length>0?(
-                <div style={{display:"flex",height:"100%",overflowX:"auto",width:"100%"}}>
-                  {selItem.photos.map((ph,i)=><img key={i} src={ph} style={{height:"100%",minWidth:"100%",objectFit:"cover",flexShrink:0}} alt=""/>)}
-                </div>
-              ):<span style={{fontSize:72}}>{selItem.emoji||"📦"}</span>}
-            </div>
-            <div style={{padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                <div style={{flex:1}}>
-          <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap",marginBottom:5}}>{selItem.postType==="guhami"&&ptBadge(selItem.postType)}{selItem.status!=="selling"&&stBadge(selItem.status)}{selItem.category.map(c=><span key={c} style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#f0f0f0",color:"#888"}}>{c}</span>)}</div>
-                  <div style={{fontSize:18,fontWeight:500}}>{selItem.title}</div>
-                  <div style={{fontSize:11,color:"#bbb",marginTop:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{selItem.region}</div>
-                </div>
-                <span style={{fontSize:16,fontWeight:500,color:selItem.price===0&&selItem.postType!=="guhami"?ACCENT:"#1a1a1a",marginLeft:8,whiteSpace:"nowrap"}}>{selItem.postType==="guhami"?(selItem.price===0?"가격 협의":`예산 ${selItem.price.toLocaleString()}원`):(selItem.price===0?"무료 나눔":`${selItem.price.toLocaleString()}원`)}</span>
+            <div style={{flex:1,overflowY:"auto"}}>
+              <div style={{height:220,background:LIGHT,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {selItem.photos?.length>0?<div style={{display:"flex",height:"100%",width:"100%",overflowX:"auto"}}>{selItem.photos.map((ph,i)=><img key={i} src={ph} style={{height:"100%",minWidth:"100%",objectFit:"cover",flexShrink:0}} alt=""/>)}</div>:<span style={{fontSize:72}}>{selItem.emoji||"📦"}</span>}
               </div>
-              {selItem.sellerId===MY_ID&&(
-                <div style={{display:"flex",gap:6,marginBottom:14}}>
-                  {Object.entries(ST).map(([k,v])=>(<button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?v.color:"#e0e0e0"}`,background:selItem.status===k?v.bg:"#fff",color:selItem.status===k?v.color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{v.label}</button>))}
+              <div style={{padding:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                  <div style={{flex:1}}>
+                    {badges.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:5}}>{badges}</div>}
+                    <div style={{fontSize:18,fontWeight:500}}>{selItem.title}</div>
+                    <div style={{fontSize:11,color:"#bbb",marginTop:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{selItem.region} · {selItem.category.join(", ")}</div>
+                  </div>
+                  <span style={{fontSize:16,fontWeight:500,color:selItem.price===0&&selItem.postType!=="guhami"?ACCENT:"#1a1a1a",marginLeft:8,whiteSpace:"nowrap"}}>
+                    {selItem.postType==="guhami"?(selItem.price===0?"가격 협의":`예산 ${selItem.price.toLocaleString()}원`):(selItem.price===0?"무료 나눔":`${selItem.price.toLocaleString()}원`)}
+                  </span>
+                </div>
+                {selItem.sellerId===MY_ID&&(
+                  <div style={{display:"flex",gap:6,marginBottom:14}}>
+                    {[["selling","판매중","#e8f5e9","#2e7d32"],["reserved","예약중","#fff3e0","#e65100"],["done","거래완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(
+                      <button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?color:"#e0e0e0"}`,background:selItem.status===k?bg:"#fff",color:selItem.status===k?color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{l}</button>
+                    ))}
+                  </div>
+                )}
+                <div style={{padding:14,background:"#fafafa",borderRadius:12,marginBottom:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selItem.desc}</p></div>
+                <div style={{padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12,marginBottom:12}}>
+                  <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>연락처</div>
+                  <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-phone" style={{fontSize:15,color:ACCENT}}/>{selItem.contact}{selItem.safeNum&&<span style={{fontSize:10,background:LIGHT,color:ACCENT,padding:"2px 8px",borderRadius:10,fontWeight:500}}>안심번호</span>}</div>
+                </div>
+                <div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}>
+                  <div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div>
+                  <div style={{height:90,background:LIGHT,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}><div style={{fontSize:22}}>🗺️</div><a href={`https://map.naver.com/v5/search/${encodeURIComponent(selItem.tradePlace||"")}`} target="_blank" rel="noreferrer" style={{fontSize:12,color:ACCENT,textDecoration:"none",border:`1px solid ${ACCENT}`,padding:"4px 14px",borderRadius:12}}>지도에서 보기</a></div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:500,fontSize:14}}>{selItem.si}</div>
+                  <div><div style={{fontSize:13,fontWeight:500}}>{selItem.seller}</div><div style={{fontSize:11,color:"#aaa"}}>판매자</div></div>
+                </div>
+              </div>
+            </div>
+            <div style={{padding:"12px 16px 80px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
+              <button onClick={()=>openChat(selItem.id,selItem.title)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:17,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><i className="ti ti-message-circle" style={{fontSize:24}}/>판매자와 채팅하기</button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 공고 상세 ── */}
+      {screen==="jobdetail"&&selJob&&(()=>{
+        const badges=jobBadges(selJob);
+        return(
+          <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+            <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>공고 상세</span></div>
+              {selJob.sellerId===MY_ID&&<button onClick={()=>startEditJob(selJob)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:16}}>
+              <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:16}}>
+                <div style={{width:52,height:52,borderRadius:14,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{selJob.icon}</div>
+                <div><div style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>{jbadge(selJob.type)}{badges.map((b,i)=><span key={i}>{b}</span>)}</div><div style={{fontSize:17,fontWeight:500}}>{selJob.title}</div></div>
+              </div>
+              {selJob.sellerId===MY_ID&&(
+                <div style={{display:"flex",gap:8,marginBottom:14}}>
+                  {[["active","진행중","#e8f5e9","#2e7d32"],["done","완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(
+                    <button key={k} onClick={()=>changeJobStatus(selJob.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selJob.jobStatus===k?color:"#e0e0e0"}`,background:selJob.jobStatus===k?bg:"#fff",color:selJob.jobStatus===k?color:"#aaa",fontSize:12,cursor:"pointer",fontWeight:selJob.jobStatus===k?500:400}}>{l}</button>
+                  ))}
                 </div>
               )}
-              <div style={{padding:14,background:"#fafafa",borderRadius:12,marginBottom:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selItem.desc}</p></div>
-              <div style={{padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12,marginBottom:12}}>
-                <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>연락처</div>
-                <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-phone" style={{fontSize:15,color:ACCENT}}/>{selItem.contact}{selItem.safeNum&&<span style={{fontSize:10,background:LIGHT,color:ACCENT,padding:"2px 8px",borderRadius:10,fontWeight:500}}>안심번호</span>}</div>
-              </div>
-              <div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}>
-                <div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div>
-                <div style={{height:90,background:LIGHT,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}><div style={{fontSize:22}}>🗺️</div><a href={`https://map.naver.com/v5/search/${encodeURIComponent(selItem.tradePlace||"")}`} target="_blank" rel="noreferrer" style={{fontSize:12,color:ACCENT,textDecoration:"none",border:`1px solid ${ACCENT}`,padding:"4px 14px",borderRadius:12}}>지도에서 보기</a></div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12}}>
-                <div style={{width:36,height:36,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:500,fontSize:14}}>{selItem.si}</div>
-                <div><div style={{fontSize:13,fontWeight:500}}>{selItem.seller}</div><div style={{fontSize:11,color:"#aaa"}}>판매자</div></div>
-              </div>
+              {[["단체",selJob.org],["지역",selJob.location],["기간",selJob.date],["보수",selJob.pay]].map(([k,v])=>(<div key={k} style={{display:"flex",padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><span style={{fontSize:13,color:"#aaa",width:48}}>{k}</span><span style={{fontSize:13,fontWeight:k==="보수"?500:400,color:k==="보수"?ACCENT:"#1a1a1a"}}>{v}</span></div>))}
+              <div style={{marginTop:16,padding:14,background:"#fafafa",borderRadius:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selJob.desc}</p></div>
+            </div>
+            <div style={{padding:"12px 16px 80px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
+              <button onClick={()=>openChat(selJob.id,selJob.title)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:17,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><i className="ti ti-message-circle" style={{fontSize:24}}/>지원 / 문의 채팅</button>
             </div>
           </div>
-          <div style={{padding:"12px 16px 80px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <button onClick={()=>openChat(selItem.id,selItem.title)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:17,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-              <i className="ti ti-message-circle" style={{fontSize:24}}/>판매자와 채팅하기
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* JOB DETAIL */}
-      {screen==="jobdetail"&&selJob&&(
-        <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-          <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <button onClick={()=>go("home","home")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
-            <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
-          </div>
-          <div style={{flex:1,overflowY:"auto",padding:16,paddingBottom:80}}>
-            <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:16}}><div style={{width:52,height:52,borderRadius:14,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{selJob.icon}</div><div><div style={{display:"flex",gap:6,marginBottom:4}}>{jbadge(selJob.type)}</div><div style={{fontSize:17,fontWeight:500}}>{selJob.title}</div></div></div>
-            {[["단체",selJob.org],["지역",selJob.location],["기간",selJob.date],["보수",selJob.pay]].map(([k,v])=>(<div key={k} style={{display:"flex",padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><span style={{fontSize:13,color:"#aaa",width:48}}>{k}</span><span style={{fontSize:13,fontWeight:k==="보수"?500:400,color:k==="보수"?ACCENT:"#1a1a1a"}}>{v}</span></div>))}
-            <div style={{marginTop:16,padding:14,background:"#fafafa",borderRadius:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selJob.desc}</p></div>
-          </div>
-          <div style={{padding:"12px 16px 80px",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <button onClick={()=>openChat(selJob.id,selJob.title)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:17,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><i className="ti ti-message-circle" style={{fontSize:24}}/>지원 / 문의 채팅</button>
-          </div>
-        </div>
-      )}
-
-      {/* POST / EDIT */}
+      {/* ── 올리기 / 수정 ── */}
       {screen==="post"&&(
         <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
           <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <button onClick={()=>{setEditItem(null);setForm(emptyForm);go("home","home");}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-x"/></button>
-            <span style={{fontWeight:500,fontSize:15}}>{editItem?"게시글 수정":"올리기"}</span>
+            <button onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform(emptyJform);goHome();}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-x"/></button>
+            <span style={{fontWeight:500,fontSize:15}}>{editItem||editJob?"수정":"올리기"}</span>
           </div>
-          {!editItem&&<div style={{display:"flex",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>{[["item","중고 물건"],["job","일자리 공고"]].map(([t,l])=>(<button key={t} onClick={()=>setPostMode(t)} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:postMode===t?500:400,color:postMode===t?ACCENT:"#aaa",borderBottom:postMode===t?`2px solid ${ACCENT}`:"2px solid transparent"}}>{l}</button>))}</div>}
+          {!editItem&&!editJob&&<div style={{display:"flex",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>{[["item","중고 물건"],["job","일자리 공고"]].map(([t,l])=>(<button key={t} onClick={()=>setPostMode(t)} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:postMode===t?500:400,color:postMode===t?ACCENT:"#aaa",borderBottom:postMode===t?`2px solid ${ACCENT}`:"2px solid transparent"}}>{l}</button>))}</div>}
           <div style={{flex:1,overflowY:"auto",padding:16}}>
             {(postMode==="item"||editItem)?(
               <>
+                {/* 나누미/구하미 선택 */}
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>나누미 / 구하미</div>
+                  <div style={{display:"flex",gap:8}}>
+                    {[["nanumi","나누미","#e8f4fd","#1565c0"],["guhami","구하미","#fce4ec","#c62828"]].map(([k,l,bg,color])=>(
+                      <button key={k} onClick={()=>setForm(p=>({...p,postType:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${form.postType===k?color:"#e0e0e0"}`,background:form.postType===k?bg:"#fff",color:form.postType===k?color:"#aaa",fontSize:13,fontWeight:form.postType===k?600:400,cursor:"pointer"}}>{l}</button>
+                    ))}
+                  </div>
+                </div>
+                {/* 사진 */}
                 <div style={{marginBottom:14}}>
                   <div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>사진 ({form.photos.length}/10)</div>
                   <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
@@ -376,21 +406,11 @@ export default function App() {
                     {form.photos.map((ph,i)=>(<div key={i} style={{position:"relative",flexShrink:0}}><img src={ph} style={{width:72,height:72,borderRadius:12,objectFit:"cover"}} alt=""/><button onClick={()=>setForm(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))} style={{position:"absolute",top:-4,right:-4,width:18,height:18,borderRadius:"50%",background:"#333",border:"none",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>))}
                   </div>
                 </div>
-                <div style={{marginBottom:12}}>
-                  <div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>나누미 / 구하미</div>
-                  <div style={{display:"flex",gap:8}}>
-                    {[["nanumi","나누미","#e8f4fd","#1565c0"],["guhami","구하미","#fce4ec","#c62828"]].map(([k,l,bg,color])=>(
-                      <button key={k} onClick={()=>setForm(p=>({...p,postType:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${form.postType===k?color:"#e0e0e0"}`,background:form.postType===k?bg:"#fff",color:form.postType===k?color:"#aaa",fontSize:13,fontWeight:form.postType===k?600:400,cursor:"pointer"}}>{l}</button>
-                    ))}
-                  </div>
-                </div>
                 {[{l:"제목",k:"title",ph:"예: 나무 의자 세트"},{l:"물품명",k:"itemName",ph:"예: 나무 의자"}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={inp}/></div>))}
-                <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>가격 (0이면 무료 나눔)</div><input value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} placeholder="0" type="number" style={inp}/></div>
+                <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{form.postType==="guhami"?"희망 예산 (0이면 협의)":"가격 (0이면 무료 나눔)"}</div><input value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} placeholder="0" type="number" style={inp}/></div>
                 <div style={{marginBottom:12}}>
-                  <div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>카테고리 (복수 선택 가능)</div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {ITEM_CATS_ALL.map(c=>{const a=form.category.includes(c);return(<button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{c}</button>);})}
-                  </div>
+                  <div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>카테고리 (복수 선택)</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{ITEM_CATS_ALL.map(c=>{const a=form.category.includes(c);return(<button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{c}</button>);})}</div>
                 </div>
                 <div style={{marginBottom:12}}>
                   <div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div>
@@ -402,18 +422,14 @@ export default function App() {
                     </div>)}
                   </div>
                 </div>
-                <div style={{marginBottom:12}}>
-                  <div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>연락처</div>
-                  <input value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} placeholder="010-0000-0000" style={{...inp,marginBottom:6}}/>
-                  <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"#666"}}><input type="checkbox" checked={form.safeNum} onChange={e=>setForm(p=>({...p,safeNum:e.target.checked}))}/>안심번호로 표시하기</label>
-                </div>
+                <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>연락처</div><input value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} placeholder="010-0000-0000" style={{...inp,marginBottom:6}}/><label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"#666"}}><input type="checkbox" checked={form.safeNum} onChange={e=>setForm(p=>({...p,safeNum:e.target.checked}))}/>안심번호로 표시하기</label></div>
                 <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>거래 희망 장소</div><input value={form.tradePlace} onChange={e=>setForm(p=>({...p,tradePlace:e.target.value}))} placeholder="예: 대학로 마로니에공원 앞" style={inp}/></div>
                 <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>설명</div><textarea value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="물건 상태, 주의사항 등" rows={3} style={{...inp,resize:"none"}}/></div>
                 <button onClick={submitItem} style={{width:"100%",height:46,borderRadius:12,border:"none",background:form.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:80}}>{editItem?"수정 완료":"올리기"}</button>
               </>
             ):(
               <>
-                <div style={{marginBottom:12}}>
+                <div style={{marginBottom:14}}>
                   <div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>구인 / 구직</div>
                   <div style={{display:"flex",gap:8}}>
                     {[["guin","구인","#e8f4fd","#1565c0"],["gujik","구직","#f3e5f5","#6a1b9a"]].map(([k,l,bg,color])=>(
@@ -425,7 +441,7 @@ export default function App() {
                 <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>공고 내용</div><textarea value={jform.desc} onChange={e=>setJform(p=>({...p,desc:e.target.value}))} placeholder="모집 조건, 담당 업무 등" rows={3} style={{...inp,resize:"none"}}/></div>
                 <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>분야</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["조명","무대","음향","분장","영상","기타"].map(f=>(<button key={f} onClick={()=>setJform(p=>({...p,field:f}))} style={{padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:jform.field===f?ACCENT:"#e0e0e0",background:jform.field===f?ACCENT:"#fff",color:jform.field===f?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{f}</button>))}</div></div>
                 <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>고용 형태</div><div style={{display:"flex",gap:6}}>{["단기","장기"].map(t=>(<button key={t} onClick={()=>setJform(p=>({...p,type:t}))} style={{padding:"5px 16px",borderRadius:20,border:"0.5px solid",borderColor:jform.type===t?ACCENT:"#e0e0e0",background:jform.type===t?ACCENT:"#fff",color:jform.type===t?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{t}</button>))}</div></div>
-                <button onClick={submitJob} style={{width:"100%",height:46,borderRadius:12,border:"none",background:jform.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:80}}>공고 올리기</button>
+                <button onClick={submitJob} style={{width:"100%",height:46,borderRadius:12,border:"none",background:jform.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:80}}>{editJob?"수정 완료":"공고 올리기"}</button>
               </>
             )}
             {posted&&<div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"rgba(45,106,79,0.95)",color:"#fff",padding:"12px 24px",borderRadius:14,fontSize:14,fontWeight:500,zIndex:200}}>✓ 완료!</div>}
@@ -433,7 +449,7 @@ export default function App() {
         </div>
       )}
 
-      {/* CHAT LIST */}
+      {/* ── 채팅 목록 ── */}
       {screen==="chatlist"&&(
         <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
           <div style={{padding:"20px 16px 14px",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><div style={{fontSize:18,fontWeight:500}}>채팅</div></div>
@@ -449,7 +465,7 @@ export default function App() {
         </div>
       )}
 
-      {/* CHAT */}
+      {/* ── 채팅 ── */}
       {screen==="chat"&&(
         <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:64}}>
           <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
@@ -468,13 +484,10 @@ export default function App() {
         </div>
       )}
 
-      {/* NOTIFY */}
+      {/* ── 알림 설정 ── */}
       {screen==="notify"&&(
         <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-          <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <button onClick={()=>go("home","home")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
-            <span style={{fontWeight:500,fontSize:15}}>알림 설정</span>
-          </div>
+          <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>알림 설정</span></div>
           <div style={{flex:1,overflowY:"auto",padding:16,paddingBottom:80}}>
             {[{k:"comment",l:"내 게시글에 댓글",d:"댓글이 달리면 알림"},{k:"keyword",l:"키워드 알림",d:"등록 키워드 물건 올라오면 알림"},{k:"newItem",l:"새 물건 등록",d:"관심 카테고리 새 물건 알림"},{k:"job",l:"일자리 공고",d:"새 일자리 공고 알림"}].map(({k,l,d})=>(
               <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:"0.5px solid #f5f5f5"}}>
@@ -484,15 +497,12 @@ export default function App() {
             ))}
             <div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:20,marginBottom:10}}>키워드 관리</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>{kwds.map(kw=>(<div key={kw} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",background:LIGHT,borderRadius:20}}><span style={{fontSize:13,color:ACCENT}}>{kw}</span><button onClick={()=>setKwds(p=>p.filter(k=>k!==kw))} style={{background:"none",border:"none",cursor:"pointer",color:ACCENT,padding:0,fontSize:15,lineHeight:1}}>×</button></div>))}</div>
-            <div style={{display:"flex",gap:8}}>
-              <input value={newKwd} onChange={e=>setNewKwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} placeholder="키워드 추가" style={{flex:1,borderRadius:10,border:"0.5px solid #e0e0e0",padding:"9px 12px",fontSize:13,outline:"none"}}/>
-              <button onClick={()=>{if(newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} style={{padding:"9px 16px",borderRadius:10,border:"none",background:ACCENT,color:"#fff",fontSize:13,cursor:"pointer"}}>추가</button>
-            </div>
+            <div style={{display:"flex",gap:8}}><input value={newKwd} onChange={e=>setNewKwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} placeholder="키워드 추가" style={{flex:1,borderRadius:10,border:"0.5px solid #e0e0e0",padding:"9px 12px",fontSize:13,outline:"none"}}/><button onClick={()=>{if(newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} style={{padding:"9px 16px",borderRadius:10,border:"none",background:ACCENT,color:"#fff",fontSize:13,cursor:"pointer"}}>추가</button></div>
           </div>
         </div>
       )}
 
-      {/* MY PAGE */}
+      {/* ── 마이페이지 ── */}
       {screen==="mypage"&&(
         <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
           <div style={{padding:"20px 16px 14px",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><div style={{fontSize:18,fontWeight:500}}>마이페이지</div></div>
@@ -511,10 +521,10 @@ export default function App() {
         </div>
       )}
 
-      {/* BOTTOM NAV */}
+      {/* ── 하단 네비게이션 ── */}
       <div style={{position:"absolute",bottom:0,left:0,right:0,height:64,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50}}>
-        <button style={tb("home")} onClick={()=>go("home","home")}><i className="ti ti-home" style={tic("home")}/>홈</button>
-        <button style={tb("post")} onClick={()=>{setEditItem(null);setForm(emptyForm);setPostMode("item");go("post","post");}}>
+        <button style={tb("home")} onClick={goHome}><i className="ti ti-home" style={tic("home")}/>홈</button>
+        <button style={tb("post")} onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform(emptyJform);setPostMode("item");go("post","post");}}>
           <div style={{width:44,height:44,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-24}}><i className="ti ti-plus" style={{fontSize:22,color:"#fff"}}/></div>
           <span style={{marginTop:2}}>올리기</span>
         </button>
