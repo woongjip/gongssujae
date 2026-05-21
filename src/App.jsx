@@ -18,21 +18,13 @@ const ADMIN_PW="admin1234";
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:""};
 const emptyJform={title:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
-// Kakao Maps SDK를 로드하고 완전히 준비되면 cb 호출
-// autoload=false + kakao.maps.load() 패턴으로 타이밍 문제 방지
+// index.html에서 SDK를 로드했으므로 준비될 때까지만 폴링
 function loadKakaoSDK(cb){
-  if(window.kakao?.maps?.Map){cb();return;}
-  const trigger=()=>window.kakao.maps.load(cb);
-  if(!document.getElementById("kakaoMapScript")){
-    const s=document.createElement("script");
-    s.id="kakaoMapScript";
-    s.src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&autoload=false&libraries=services,geocoder";
-    s.onload=trigger;
-    document.head.appendChild(s);
-  }else{
-    const poll=(n=0)=>window.kakao?.maps?trigger():n<30&&setTimeout(()=>poll(n+1),100);
-    poll();
-  }
+  const poll=(n=0)=>{
+    if(window.kakao?.maps?.Map){cb();}
+    else if(n<50){setTimeout(()=>poll(n+1),200);}
+  };
+  poll();
 }
 
 async function resizeImage(file){
