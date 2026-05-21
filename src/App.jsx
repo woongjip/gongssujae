@@ -3,7 +3,7 @@ import {
   db, auth, registerFCMToken,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where,
+  setDoc, getDoc, where, increment,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut
 } from "./firebase";
@@ -218,6 +218,13 @@ export default function App(){
   useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"});},[messages]);
   useEffect(()=>{if(screen==="home"&&listRef.current)setTimeout(()=>{listRef.current.scrollTop=scrollPos.current;},30);},[screen]);
 
+  // selItem을 items 실시간 데이터와 동기화 — 상세 화면 찜·채팅수 즉시 반영
+  useEffect(()=>{
+    if(!selItem)return;
+    const updated=items.find(i=>i.id===selItem.id);
+    if(updated)setSelItem(updated);
+  },[items]);
+
   // ── 채팅 읽음 처리 ──
   useEffect(()=>{
     if(screen!=="chat"||!activeChat)return;
@@ -280,6 +287,7 @@ export default function App(){
     const snap=await getDoc(chatRef);
     if(!snap.exists()){
       await setDoc(chatRef,{participants:[currentUser.uid,sellerId],itemId,itemTitle,lastMessage:"",updatedAt:serverTimestamp()});
+      updateDoc(doc(db,"items",itemId),{chatCount:increment(1)}).catch(()=>{});
     }
   }
 
@@ -569,7 +577,7 @@ export default function App(){
                   <button onClick={e=>toggleLike(item.id,e)} style={{background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:6,flexShrink:0}}><i className="ti ti-heart" style={{fontSize:18,color:isLiked?"#e25":"#ddd"}}/></button>
                 </div>
                 <div style={{fontSize:11,color:"#bbb",marginBottom:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{item.region}{isLocal&&<span style={{color:ACCENT,marginLeft:4}}>· 내 지역</span>}</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,fontWeight:500,color:item.price===0&&item.postType!=="guhami"?ACCENT:"#1a1a1a"}}>{item.postType==="guhami"?(item.price===0?"가격 협의":`예산 ${item.price?.toLocaleString()}원`):(item.price===0?"무료 나눔":`${item.price?.toLocaleString()}원`)}</span><span style={{fontSize:10,color:"#ccc"}}><i className="ti ti-heart" style={{fontSize:11,verticalAlign:-1,marginRight:2}}/>{item.likedBy?.length||0}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,fontWeight:500,color:item.price===0&&item.postType!=="guhami"?ACCENT:"#1a1a1a"}}>{item.postType==="guhami"?(item.price===0?"가격 협의":`예산 ${item.price?.toLocaleString()}원`):(item.price===0?"무료 나눔":`${item.price?.toLocaleString()}원`)}</span><div style={{display:"flex",gap:6,alignItems:"center"}}>{(item.likedBy?.length||0)>0&&<span style={{fontSize:11,color:"#bbb",display:"flex",alignItems:"center",gap:2}}><i className="ti ti-heart" style={{fontSize:11}}/>{item.likedBy.length}</span>}{(item.chatCount||0)>0&&<span style={{fontSize:11,color:"#bbb",display:"flex",alignItems:"center",gap:2}}><i className="ti ti-message-circle" style={{fontSize:11}}/>{item.chatCount}</span>}</div></div>
               </div>
             </div>);
           })}
@@ -589,7 +597,7 @@ export default function App(){
             <div style={{height:220,background:LIGHT,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>{selItem.photos?.length>0?<div style={{display:"flex",height:"100%",width:"100%",overflowX:"auto"}}>{selItem.photos.map((ph,i)=><img key={i} src={ph} style={{height:"100%",minWidth:"100%",objectFit:"cover",flexShrink:0}} alt=""/>)}</div>:<span style={{fontSize:72}}>{selItem.emoji||"📦"}</span>}</div>
             <div style={{padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                <div style={{flex:1}}><div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:5,alignItems:"center"}}>{badges.map((b,i)=><span key={i}>{b}</span>)}{showTagPill(selItem.showTag,true)}</div><div style={{fontSize:18,fontWeight:500}}>{selItem.title}</div><div style={{fontSize:11,color:"#bbb",marginTop:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{selItem.region} · {selItem.category?.join(", ")}</div></div>
+                <div style={{flex:1}}><div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:5,alignItems:"center"}}>{badges.map((b,i)=><span key={i}>{b}</span>)}{showTagPill(selItem.showTag,true)}</div><div style={{fontSize:18,fontWeight:500}}>{selItem.title}</div><div style={{fontSize:11,color:"#bbb",marginTop:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{selItem.region} · {selItem.category?.join(", ")}</div><div style={{display:"flex",gap:10,marginTop:5}}>{(selItem.likedBy?.length||0)>0&&<span style={{fontSize:12,color:"#aaa",display:"flex",alignItems:"center",gap:3}}><i className="ti ti-heart" style={{fontSize:12,color:"#e25"}}/>{selItem.likedBy.length}명 찜</span>}{(selItem.chatCount||0)>0&&<span style={{fontSize:12,color:"#aaa",display:"flex",alignItems:"center",gap:3}}><i className="ti ti-message-circle" style={{fontSize:12,color:ACCENT}}/>{selItem.chatCount}명 채팅</span>}</div></div>
                 <span style={{fontSize:16,fontWeight:500,color:selItem.price===0&&selItem.postType!=="guhami"?ACCENT:"#1a1a1a",marginLeft:8,whiteSpace:"nowrap"}}>{selItem.postType==="guhami"?(selItem.price===0?"가격 협의":`예산 ${selItem.price?.toLocaleString()}원`):(selItem.price===0?"무료 나눔":`${selItem.price?.toLocaleString()}원`)}</span>
               </div>
               {isOwner&&<div style={{display:"flex",gap:6,marginBottom:14}}>{[["selling","판매중","#e8f5e9","#2e7d32"],["reserved","예약중","#fff3e0","#e65100"],["done","거래완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?color:"#e0e0e0"}`,background:selItem.status===k?bg:"#fff",color:selItem.status===k?color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{l}</button>))}</div>}

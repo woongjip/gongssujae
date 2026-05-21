@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, getDocs
+  setDoc, getDoc, where, getDocs, increment
 } from "firebase/firestore";
 import {
   getAuth, createUserWithEmailAndPassword,
@@ -47,7 +47,7 @@ export async function registerFCMToken(uid) {
 export {
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, getDocs,
+  setDoc, getDoc, where, getDocs, increment,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut
 };
