@@ -285,6 +285,18 @@ export default function App(){
   async function deleteJob(id){await deleteDoc(doc(db,"jobs",id));}
   async function updateReport(id,status){await updateDoc(doc(db,"reports",id),{status});}
 
+  function openKakaoMap(address){
+    if(!address)return;
+    const q=encodeURIComponent(address);
+    const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if(isMobile){
+      window.location.href=`kakaomap://search?q=${q}`;
+      setTimeout(()=>window.open(`https://map.kakao.com/?q=${q}`,"_blank"),1500);
+    }else{
+      window.open(`https://map.kakao.com/?q=${q}`,"_blank");
+    }
+  }
+
   async function updateMyProfile(updates){
     await updateDoc(doc(db,"users",currentUser.uid),updates);
     setUserProfile(p=>({...p,...updates}));
@@ -470,7 +482,7 @@ export default function App(){
               {isOwner&&<div style={{display:"flex",gap:6,marginBottom:14}}>{[["selling","판매중","#e8f5e9","#2e7d32"],["reserved","예약중","#fff3e0","#e65100"],["done","거래완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?color:"#e0e0e0"}`,background:selItem.status===k?bg:"#fff",color:selItem.status===k?color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{l}</button>))}</div>}
               <div style={{padding:14,background:"#fafafa",borderRadius:12,marginBottom:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selItem.desc}</p></div>
               <div style={{padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12,marginBottom:12}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>연락처</div><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-phone" style={{fontSize:15,color:ACCENT}}/>{selItem.contact}{selItem.safeNum&&<span style={{fontSize:10,background:LIGHT,color:ACCENT,padding:"2px 8px",borderRadius:10,fontWeight:500}}>안심번호</span>}</div></div>
-              {selItem.tradePlace&&<div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}><div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div><div style={{height:90,background:LIGHT,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}><div style={{fontSize:22}}>🗺️</div><a href={`https://map.naver.com/v5/search/${encodeURIComponent(selItem.tradePlace||"")}`} target="_blank" rel="noreferrer" style={{fontSize:12,color:ACCENT,textDecoration:"none",border:`1px solid ${ACCENT}`,padding:"4px 14px",borderRadius:12}}>지도에서 보기</a></div></div>}
+              {selItem.tradePlace&&<div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}><div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div><div onClick={()=>openKakaoMap(selItem.tradePlace)} style={{height:90,background:"#FEE500",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,cursor:"pointer"}}><div style={{fontSize:24}}>🗺️</div><div style={{fontSize:12,color:"#3C1E1E",fontWeight:700}}>카카오맵으로 보기</div><div style={{fontSize:10,color:"#7a5c5c"}}>탭하면 지도 앱이 열립니다</div></div></div>}
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12}}>
                 <div style={{width:40,height:40,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:500,fontSize:14}}>{selItem.si}</div>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{selItem.seller}</div><div style={{fontSize:11,color:"#aaa"}}>판매자</div></div>
