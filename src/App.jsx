@@ -327,6 +327,8 @@ export default function App(){
       }else setTimeout(loadMap,500);
     }
   },[screen,selItem?.tradePlace]);
+  
+  async function updateMyProfile(updates){
     await updateDoc(doc(db,"users",currentUser.uid),updates);
     setUserProfile(p=>({...p,...updates}));
   }
