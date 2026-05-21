@@ -297,7 +297,36 @@ export default function App(){
     }
   }
 
-  async function updateMyProfile(updates){
+  // 카카오맵 로드
+  useEffect(()=>{
+    if(screen!=="detail"||!selItem?.tradePlace)return;
+    const loadMap=()=>{
+      const el=document.getElementById("kakaoMapDetail");
+      if(!el||!window.kakao?.maps)return;
+      const map=new window.kakao.maps.Map(el,{
+        center:new window.kakao.maps.LatLng(37.5665,126.9780),level:4
+      });
+      const gc=new window.kakao.maps.services.Geocoder();
+      gc.addressSearch(selItem.tradePlace,(result,status)=>{
+        if(status===window.kakao.maps.services.Status.OK){
+          const coords=new window.kakao.maps.LatLng(result[0].y,result[0].x);
+          map.setCenter(coords);
+          new window.kakao.maps.Marker({map,position:coords});
+        }
+      });
+    };
+    if(window.kakao?.maps){
+      window.kakao.maps.load(loadMap);
+    }else{
+      if(!document.getElementById("kakaoMapScript")){
+        const s=document.createElement("script");
+        s.id="kakaoMapScript";
+        s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services&autoload=false`;
+        s.onload=()=>window.kakao.maps.load(loadMap);
+        document.head.appendChild(s);
+      }else setTimeout(loadMap,500);
+    }
+  },[screen,selItem?.tradePlace]);
     await updateDoc(doc(db,"users",currentUser.uid),updates);
     setUserProfile(p=>({...p,...updates}));
   }
@@ -482,7 +511,10 @@ export default function App(){
               {isOwner&&<div style={{display:"flex",gap:6,marginBottom:14}}>{[["selling","판매중","#e8f5e9","#2e7d32"],["reserved","예약중","#fff3e0","#e65100"],["done","거래완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?color:"#e0e0e0"}`,background:selItem.status===k?bg:"#fff",color:selItem.status===k?color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{l}</button>))}</div>}
               <div style={{padding:14,background:"#fafafa",borderRadius:12,marginBottom:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selItem.desc}</p></div>
               <div style={{padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12,marginBottom:12}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>연락처</div><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-phone" style={{fontSize:15,color:ACCENT}}/>{selItem.contact}{selItem.safeNum&&<span style={{fontSize:10,background:LIGHT,color:ACCENT,padding:"2px 8px",borderRadius:10,fontWeight:500}}>안심번호</span>}</div></div>
-              {selItem.tradePlace&&<div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}><div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div><div onClick={()=>openKakaoMap(selItem.tradePlace)} style={{height:90,background:"#FEE500",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,cursor:"pointer"}}><div style={{fontSize:24}}>🗺️</div><div style={{fontSize:12,color:"#3C1E1E",fontWeight:700}}>카카오맵으로 보기</div><div style={{fontSize:10,color:"#7a5c5c"}}>탭하면 지도 앱이 열립니다</div></div></div>}
+              {selItem.tradePlace&&<div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}>
+                <div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div>
+                <div id="kakaoMapDetail" style={{height:180,background:LIGHT}}/>
+              </div>}
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12}}>
                 <div style={{width:40,height:40,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:500,fontSize:14}}>{selItem.si}</div>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{selItem.seller}</div><div style={{fontSize:11,color:"#aaa"}}>판매자</div></div>
