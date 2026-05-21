@@ -304,37 +304,41 @@ useEffect(()=>{
 
   const initMap=()=>{
     if(cancelled)return;
-    setTimeout(()=>{
-      if(cancelled)return;
-      const el=document.getElementById("kakaoMapDetail");
-      if(!el)return;
-      try{
-        const map=new window.kakao.maps.Map(el,{
-          center:new window.kakao.maps.LatLng(37.5665,126.9780),level:4
-        });
-        const ps=new window.kakao.maps.services.Places();
-        ps.keywordSearch(selItem.tradePlace,(result,status)=>{
-          if(cancelled)return;
-          if(status===window.kakao.maps.services.Status.OK){
-            const coords=new window.kakao.maps.LatLng(result[0].y,result[0].x);
-            map.setCenter(coords);
-            new window.kakao.maps.Marker({map,position:coords});
-          }
-        });
-      }catch(e){console.log("map error:",e);}
-    },300);
+    const el=document.getElementById("kakaoMapDetail");
+    if(!el)return;
+    try{
+      const map=new window.kakao.maps.Map(el,{
+        center:new window.kakao.maps.LatLng(37.5665,126.9780),level:4
+      });
+      const ps=new window.kakao.maps.services.Places();
+      ps.keywordSearch(selItem.tradePlace,(result,status)=>{
+        if(cancelled)return;
+        if(status===window.kakao.maps.services.Status.OK){
+          const coords=new window.kakao.maps.LatLng(result[0].y,result[0].x);
+          map.setCenter(coords);
+          new window.kakao.maps.Marker({map,position:coords});
+        }
+      });
+    }catch(e){console.log("map error:",e);}
   };
 
-  if(window.kakao?.maps){
-    initMap();
-  }else{
-    const old=document.getElementById("kakaoMapScript");
-    if(old)old.remove();
+  const waitAndInit=(n=0)=>{
+    if(cancelled)return;
+    if(window.kakao?.maps?.Map){
+      setTimeout(initMap,300);
+    }else if(n<30){
+      setTimeout(()=>waitAndInit(n+1),200);
+    }
+  };
+
+  if(!document.getElementById("kakaoMapScript")){
     const s=document.createElement("script");
     s.id="kakaoMapScript";
     s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services`;
-    s.onload=()=>{if(!cancelled)initMap();};
+    s.onload=()=>waitAndInit();
     document.head.appendChild(s);
+  }else{
+    waitAndInit();
   }
 
   return()=>{cancelled=true;};
