@@ -300,39 +300,66 @@ export default function App(){
   // 카카오맵 로드
   useEffect(()=>{
     if(screen!=="detail"||!selItem?.tradePlace)return;
-    const loadMap=()=>{
-      setTimeout(()=>{
-        const el=document.getElementById("kakaoMapDetail");
-        if(!el||!window.kakao?.maps)return;
+    let cancelled=false;
+
+    const initMap=()=>{
+      if(cancelled)return;
+      const el=document.getElementById("kakaoMapDetail");
+      if(!el)return;
+      try{
         const map=new window.kakao.maps.Map(el,{
           center:new window.kakao.maps.LatLng(37.5665,126.9780),level:4
         });
         const ps=new window.kakao.maps.services.Places();
         ps.keywordSearch(selItem.tradePlace,(result,status)=>{
+          if(cancelled)return;
           if(status===window.kakao.maps.services.Status.OK){
             const coords=new window.kakao.maps.LatLng(result[0].y,result[0].x);
             map.setCenter(coords);
             new window.kakao.maps.Marker({map,position:coords});
           }
         });
-      },200);
+      }catch(e){console.log("map init error:",e);}
     };
-    if(window.kakao?.maps){
-      window.kakao.maps.load(loadMap);
+
+    const runLoad=()=>{
+      if(window.kakao?.maps?.Map){
+        setTimeout(initMap,200);
+      }else if(window.kakao?.maps){
+        window.kakao.maps.load(()=>setTimeout(initMap,150));
+      }
+    };
+
+    if(window.kakao?.maps?.Map){
+      setTimeout(initMap,200);
+    }else if(window.kakao?.maps){
+      window.kakao.maps.load(()=>setTimeout(initMap,150));
     }else{
       if(!document.getElementById("kakaoMapScript")){
         const s=document.createElement("script");
         s.id="kakaoMapScript";
         s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services&autoload=false`;
-        s.onload=()=>window.kakao.maps.load(loadMap);
+        s.onload=()=>{if(window.kakao?.maps)window.kakao.maps.load(()=>setTimeout(initMap,150));};
         document.head.appendChild(s);
-      }else setTimeout(loadMap,800);
+      }else{
+        // 스크립트 태그는 있지만 아직 로딩 중일 수 있으므로 대기
+        const wait=(n=0)=>{
+          if(cancelled)return;
+          if(window.kakao?.maps?.Map){initMap();return;}
+          if(n<20)setTimeout(()=>wait(n+1),200);
+        };
+        wait();
+      }
     }
+
+    return()=>{cancelled=true;};
   },[screen,selItem?.tradePlace]);
+
+  async function updateMyProfile(updates){
+    if(!currentUser)return;
     await updateDoc(doc(db,"users",currentUser.uid),updates);
     setUserProfile(p=>({...p,...updates}));
   }
-
 
   // ── Computed ──
   const filtItems=useMemo(()=>{
