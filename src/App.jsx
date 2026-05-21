@@ -298,11 +298,13 @@ export default function App(){
   }
 
   // 카카오맵 로드
-  useEffect(()=>{
-    if(screen!=="detail"||!selItem?.tradePlace)return;
-    let cancelled=false;
+useEffect(()=>{
+  if(screen!=="detail"||!selItem?.tradePlace)return;
+  let cancelled=false;
 
-    const initMap=()=>{
+  const initMap=()=>{
+    if(cancelled)return;
+    setTimeout(()=>{
       if(cancelled)return;
       const el=document.getElementById("kakaoMapDetail");
       if(!el)return;
@@ -319,41 +321,24 @@ export default function App(){
             new window.kakao.maps.Marker({map,position:coords});
           }
         });
-      }catch(e){console.log("map init error:",e);}
-    };
+      }catch(e){console.log("map error:",e);}
+    },300);
+  };
 
-    const runLoad=()=>{
-      if(window.kakao?.maps?.Map){
-        setTimeout(initMap,200);
-      }else if(window.kakao?.maps){
-        window.kakao.maps.load(()=>setTimeout(initMap,150));
-      }
-    };
+  if(window.kakao?.maps){
+    initMap();
+  }else{
+    const old=document.getElementById("kakaoMapScript");
+    if(old)old.remove();
+    const s=document.createElement("script");
+    s.id="kakaoMapScript";
+    s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services`;
+    s.onload=()=>{if(!cancelled)initMap();};
+    document.head.appendChild(s);
+  }
 
-    if(window.kakao?.maps?.Map){
-      setTimeout(initMap,200);
-    }else if(window.kakao?.maps){
-      window.kakao.maps.load(()=>setTimeout(initMap,150));
-    }else{
-      if(!document.getElementById("kakaoMapScript")){
-        const s=document.createElement("script");
-        s.id="kakaoMapScript";
-        s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services&autoload=false`;
-        s.onload=()=>{if(window.kakao?.maps)window.kakao.maps.load(()=>setTimeout(initMap,150));};
-        document.head.appendChild(s);
-      }else{
-        // 스크립트 태그는 있지만 아직 로딩 중일 수 있으므로 대기
-        const wait=(n=0)=>{
-          if(cancelled)return;
-          if(window.kakao?.maps?.Map){initMap();return;}
-          if(n<20)setTimeout(()=>wait(n+1),200);
-        };
-        wait();
-      }
-    }
-
-    return()=>{cancelled=true;};
-  },[screen,selItem?.tradePlace]);
+  return()=>{cancelled=true;};
+},[screen,selItem?.tradePlace]);
 
   async function updateMyProfile(updates){
     if(!currentUser)return;
