@@ -62,6 +62,7 @@ function MapPicker({loaded,onSelect}){
     if(!loaded||!mapRef.current)return;
     const center=new window.kakao.maps.LatLng(36.5,127.5);
     const map=new window.kakao.maps.Map(mapRef.current,{center,level:13});
+    map.relayout(); // Safari/PWA: paint 전 생성 시 빈 지도 방지
     let marker=null;
     window.kakao.maps.event.addListener(map,"click",(e)=>{
       const lat=e.latLng.getLat();
@@ -84,7 +85,8 @@ function MapPicker({loaded,onSelect}){
     </div>
   );
 
-  return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
+  // position:absolute 로 Safari flex 자식의 height:100% 오계산 방지
+  return <div ref={mapRef} style={{position:"absolute",inset:0}}/>;
 }
 
 export default function App(){
@@ -362,6 +364,7 @@ export default function App(){
         const lng=selItem.tradeLng||126.9780;
         const coords=new window.kakao.maps.LatLng(lat,lng);
         const map=new window.kakao.maps.Map(el,{center:coords,level:4});
+        map.relayout(); // Safari/PWA: paint 전 생성 시 빈 지도 방지
         new window.kakao.maps.Marker({map,position:coords});
         if(!selItem.tradeLat){
           const ps=new window.kakao.maps.services.Places();
