@@ -301,19 +301,21 @@ export default function App(){
   useEffect(()=>{
     if(screen!=="detail"||!selItem?.tradePlace)return;
     const loadMap=()=>{
-      const el=document.getElementById("kakaoMapDetail");
-      if(!el||!window.kakao?.maps)return;
-      const map=new window.kakao.maps.Map(el,{
-        center:new window.kakao.maps.LatLng(37.5665,126.9780),level:4
-      });
-      const gc=new window.kakao.maps.services.Geocoder();
-      gc.addressSearch(selItem.tradePlace,(result,status)=>{
-        if(status===window.kakao.maps.services.Status.OK){
-          const coords=new window.kakao.maps.LatLng(result[0].y,result[0].x);
-          map.setCenter(coords);
-          new window.kakao.maps.Marker({map,position:coords});
-        }
-      });
+      setTimeout(()=>{
+        const el=document.getElementById("kakaoMapDetail");
+        if(!el||!window.kakao?.maps)return;
+        const map=new window.kakao.maps.Map(el,{
+          center:new window.kakao.maps.LatLng(37.5665,126.9780),level:4
+        });
+        const ps=new window.kakao.maps.services.Places();
+        ps.keywordSearch(selItem.tradePlace,(result,status)=>{
+          if(status===window.kakao.maps.services.Status.OK){
+            const coords=new window.kakao.maps.LatLng(result[0].y,result[0].x);
+            map.setCenter(coords);
+            new window.kakao.maps.Marker({map,position:coords});
+          }
+        });
+      },200);
     };
     if(window.kakao?.maps){
       window.kakao.maps.load(loadMap);
@@ -324,14 +326,13 @@ export default function App(){
         s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services&autoload=false`;
         s.onload=()=>window.kakao.maps.load(loadMap);
         document.head.appendChild(s);
-      }else setTimeout(loadMap,500);
+      }else setTimeout(loadMap,800);
     }
   },[screen,selItem?.tradePlace]);
-  
-  async function updateMyProfile(updates){
     await updateDoc(doc(db,"users",currentUser.uid),updates);
     setUserProfile(p=>({...p,...updates}));
   }
+
 
   // ── Computed ──
   const filtItems=useMemo(()=>{
