@@ -144,6 +144,7 @@ export default function App(){
   const scrollPos=useRef(0);
   const chatEnd=useRef(null);
   const logoTimer=useRef(null);
+  const chatRoomsLoaded=useRef(false);
 
   // ── Firebase Auth listener ──
   useEffect(()=>{
@@ -217,6 +218,26 @@ export default function App(){
   useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"});},[messages]);
   useEffect(()=>{if(screen==="home"&&listRef.current)setTimeout(()=>{listRef.current.scrollTop=scrollPos.current;},30);},[screen]);
 
+  // ── 채팅 읽음 처리 ──
+  useEffect(()=>{
+    if(screen!=="chat"||!activeChat)return;
+    localStorage.setItem(`chatRead_${activeChat}`,Date.now().toString());
+  },[screen,activeChat]);
+
+  // ── 새 채팅 메시지 브라우저 알림 ──
+  useEffect(()=>{
+    if(!chatRooms.length){chatRoomsLoaded.current=false;return;}
+    if(!chatRoomsLoaded.current){chatRoomsLoaded.current=true;return;}
+    chatRooms.forEach(room=>{
+      if(room.id===activeChat||!room.lastMessage)return;
+      const lastRead=parseInt(localStorage.getItem(`chatRead_${room.id}`)||"0");
+      const msgTime=(room.updatedAt?.seconds||0)*1000;
+      if(msgTime>lastRead&&Notification.permission==="granted"){
+        new Notification("새 메시지",{body:room.lastMessage,icon:"/icon-192.png",tag:room.id});
+      }
+    });
+  },[chatRooms]);
+
   // ── Auth functions ──
   async function handleLogin(){
     setAuthError("");setAuthBusy(true);
@@ -267,6 +288,7 @@ export default function App(){
     const text=chatMsg;setChatMsg("");
     await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:currentUser.uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
     await updateDoc(doc(db,"chats",activeChat),{lastMessage:text,updatedAt:serverTimestamp()});
+    localStorage.setItem(`chatRead_${activeChat}`,Date.now().toString());
   }
 
   async function toggleLike(itemId,e){
@@ -275,7 +297,14 @@ export default function App(){
     const item=items.find(i=>i.id===itemId);if(!item)return;
     const likedBy=item.likedBy||[];
     const isLiked=likedBy.includes(currentUser.uid);
-    await updateDoc(doc(db,"items",itemId),{likedBy:isLiked?likedBy.filter(u=>u!==currentUser.uid):[...likedBy,currentUser.uid]});
+    const newLikedBy=isLiked?likedBy.filter(u=>u!==currentUser.uid):[...likedBy,currentUser.uid];
+    try{
+      await updateDoc(doc(db,"items",itemId),{likedBy:newLikedBy});
+      // 상세 화면에서도 즉시 UI 반영
+      if(selItem?.id===itemId)setSelItem(p=>p?{...p,likedBy:newLikedBy}:p);
+    }catch(err){
+      console.log("찜 오류 (Firestore 규칙 확인 필요):",err);
+    }
   }
 
   async function submitItem(){
@@ -397,6 +426,11 @@ export default function App(){
   const myItems=useMemo(()=>items.filter(i=>i.sellerId===currentUser?.uid),[items,currentUser]);
   const upcomingEnds=useMemo(()=>items.filter(i=>i.showEndDate&&new Date(i.showEndDate)>=new Date()),[items]);
   const filtAdminUsers=useMemo(()=>adminUserQ?allUsers.filter(u=>u.name?.includes(adminUserQ)||u.affiliation?.includes(adminUserQ)):allUsers,[allUsers,adminUserQ]);
+  const unreadChatCount=useMemo(()=>chatRooms.filter(r=>{
+    if(!r.lastMessage||r.id===activeChat)return false;
+    const lastRead=parseInt(localStorage.getItem(`chatRead_${r.id}`)||"0");
+    return(r.updatedAt?.seconds||0)*1000>lastRead;
+  }).length,[chatRooms,activeChat]);
   const catStats=useMemo(()=>ITEM_CATS_ALL.map(c=>({label:c,value:items.filter(i=>i.category?.includes(c)).length})),[items]);
   const regionStats=useMemo(()=>{const m={};items.forEach(i=>{const c=i.region?.split(" ")[0]||"기타";m[c]=(m[c]||0)+1;});return Object.entries(m).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);},[items]);
   const adminStats=useMemo(()=>({totalUsers:allUsers.length,activeUsers:allUsers.filter(u=>u.status!=="suspended").length,totalItems:items.length,doneItems:items.filter(i=>i.status==="done").length,totalJobs:jobs.length,reports:reports.filter(r=>r.status==="검토중").length}),[allUsers,items,jobs,reports]);
@@ -693,7 +727,13 @@ export default function App(){
           <div style={{width:44,height:44,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-24}}><i className="ti ti-plus" style={{fontSize:22,color:"#fff"}}/></div>
           <span style={{marginTop:2}}>올리기</span>
         </button>
-        <button style={tb("chatlist")} onClick={()=>go("chatlist","chatlist")}><i className="ti ti-message-circle" style={tic("chatlist")}/>채팅</button>
+        <button style={tb("chatlist")} onClick={()=>go("chatlist","chatlist")}>
+          <div style={{position:"relative",display:"inline-flex"}}>
+            <i className="ti ti-message-circle" style={tic("chatlist")}/>
+            {unreadChatCount>0&&<span style={{position:"absolute",top:-4,right:-6,background:"#e25",color:"#fff",borderRadius:10,fontSize:9,padding:"0 4px",lineHeight:"16px",minWidth:14,textAlign:"center",fontWeight:600}}>{unreadChatCount}</span>}
+          </div>
+          채팅
+        </button>
         <button style={tb("mypage")} onClick={()=>go("mypage","mypage")}><i className="ti ti-user" style={tic("mypage")}/>MY</button>
       </div>)}
 
