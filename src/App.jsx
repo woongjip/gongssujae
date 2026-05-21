@@ -18,6 +18,23 @@ const ADMIN_PW="admin1234";
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:""};
 const emptyJform={title:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
+// Kakao Maps SDK를 로드하고 완전히 준비되면 cb 호출
+// autoload=false + kakao.maps.load() 패턴으로 타이밍 문제 방지
+function loadKakaoSDK(cb){
+  if(window.kakao?.maps?.Map){cb();return;}
+  const trigger=()=>window.kakao.maps.load(cb);
+  if(!document.getElementById("kakaoMapScript")){
+    const s=document.createElement("script");
+    s.id="kakaoMapScript";
+    s.src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&autoload=false&libraries=services,geocoder";
+    s.onload=trigger;
+    document.head.appendChild(s);
+  }else{
+    const poll=(n=0)=>window.kakao?.maps?trigger():n<30&&setTimeout(()=>poll(n+1),100);
+    poll();
+  }
+}
+
 async function resizeImage(file){
   return new Promise(resolve=>{
     const reader=new FileReader();
@@ -42,32 +59,23 @@ function MapPicker({loaded,onSelect}){
   const mapRef=useRef(null);
 
   useEffect(()=>{
-    if(!loaded)return;
-    const wait=(n=0)=>{
-      if(window.kakao?.maps?.Map){
-        setTimeout(()=>{
-          if(!mapRef.current)return;
-          const center=new window.kakao.maps.LatLng(36.5,127.5);
-          const map=new window.kakao.maps.Map(mapRef.current,{center,level:13});
-          let marker=null;
-          window.kakao.maps.event.addListener(map,"click",(e)=>{
-            const lat=e.latLng.getLat();
-            const lng=e.latLng.getLng();
-            if(marker)marker.setMap(null);
-            marker=new window.kakao.maps.Marker({map,position:e.latLng});
-            const gc=new window.kakao.maps.services.Geocoder();
-            gc.coord2Address(lng,lat,(result,status)=>{
-              let address="";
-              if(status===window.kakao.maps.services.Status.OK){
-                address=result[0]?.road_address?.address_name||result[0]?.address?.address_name||"";
-              }
-              onSelect(lat,lng,address||`${lat.toFixed(5)},${lng.toFixed(5)}`);
-            });
-          });
-        },300);
-      }else if(n<30){setTimeout(()=>wait(n+1),200);}
-    };
-    wait();
+    if(!loaded||!mapRef.current)return;
+    const center=new window.kakao.maps.LatLng(36.5,127.5);
+    const map=new window.kakao.maps.Map(mapRef.current,{center,level:13});
+    let marker=null;
+    window.kakao.maps.event.addListener(map,"click",(e)=>{
+      const lat=e.latLng.getLat();
+      const lng=e.latLng.getLng();
+      if(marker)marker.setMap(null);
+      marker=new window.kakao.maps.Marker({map,position:e.latLng});
+      const gc=new window.kakao.maps.services.Geocoder();
+      gc.coord2Address(lng,lat,(result,status)=>{
+        let address="";
+        if(status===window.kakao.maps.services.Status.OK)
+          address=result[0]?.road_address?.address_name||result[0]?.address?.address_name||"";
+        onSelect(lat,lng,address||`${lat.toFixed(5)},${lng.toFixed(5)}`);
+      });
+    });
   },[loaded]);
 
   if(!loaded)return(
@@ -345,7 +353,7 @@ export default function App(){
     if(screen!=="detail"||!selItem?.tradePlace)return;
     let cancelled=false;
 
-    const initMap=()=>{
+    loadKakaoSDK(()=>{
       if(cancelled)return;
       const el=document.getElementById("kakaoMapDetail");
       if(!el)return;
@@ -355,7 +363,6 @@ export default function App(){
         const coords=new window.kakao.maps.LatLng(lat,lng);
         const map=new window.kakao.maps.Map(el,{center:coords,level:4});
         new window.kakao.maps.Marker({map,position:coords});
-        // 저장된 좌표 없으면 키워드 검색 fallback
         if(!selItem.tradeLat){
           const ps=new window.kakao.maps.services.Places();
           ps.keywordSearch(selItem.tradePlace,(result,status)=>{
@@ -368,21 +375,7 @@ export default function App(){
           });
         }
       }catch(e){console.log("map error:",e);}
-    };
-
-    const waitAndInit=(n=0)=>{
-      if(cancelled)return;
-      if(window.kakao?.maps?.Map){setTimeout(initMap,300);}
-      else if(n<30){setTimeout(()=>waitAndInit(n+1),200);}
-    };
-
-    if(!document.getElementById("kakaoMapScript")){
-      const s=document.createElement("script");
-      s.id="kakaoMapScript";
-      s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services,geocoder`;
-      s.onload=()=>waitAndInit();
-      document.head.appendChild(s);
-    }else{waitAndInit();}
+    });
 
     return()=>{cancelled=true;};
   },[screen,selItem?.tradePlace]);
@@ -622,7 +615,7 @@ export default function App(){
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>카테고리 (복수 선택)</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{ITEM_CATS_ALL.map(c=>{const a=form.category.includes(c);return(<button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{c}</button>);})}</div></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={form.region} readOnly onClick={()=>setShowR(true)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/>{showR&&(<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:140,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}><div style={{padding:"8px 12px",borderBottom:"0.5px solid #f0f0f0",position:"sticky",top:0,background:"#fff"}}><input value={rSearch} onChange={e=>setRSearch(e.target.value)} placeholder="지역 검색" style={{width:"100%",border:"none",outline:"none",fontSize:13}} autoFocus/></div>{filtR.slice(0,20).map(r=>(<div key={r} onClick={()=>{setForm(p=>({...p,region:r}));setShowR(false);setRSearch("");}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f9f9f9"}}>{r}</div>))}</div>)}</div></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>연락처</div><input value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} placeholder="010-0000-0000" style={{...inp,marginBottom:6}}/><label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"#666"}}><input type="checkbox" checked={form.safeNum} onChange={e=>setForm(p=>({...p,safeNum:e.target.checked}))}/>안심번호로 표시하기</label></div>
-              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>거래 희망 장소</div><div style={{display:"flex",gap:6}}><input value={form.tradePlace} onChange={e=>setForm(p=>({...p,tradePlace:e.target.value,tradeLat:null,tradeLng:null}))} placeholder="예: 대학로 마로니에공원 앞" style={{...inp,flex:1}}/><button type="button" onClick={()=>{setShowMapPicker(true);if(!document.getElementById("kakaoMapScript")){const s=document.createElement("script");s.id="kakaoMapScript";s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=9c3090415c027e63579160554b84854d&libraries=services,geocoder`;s.onload=()=>setMapPickerLoaded(true);document.head.appendChild(s);}else{setMapPickerLoaded(true);}}} style={{flexShrink:0,padding:"0 12px",borderRadius:10,border:`1px solid ${ACCENT}`,background:LIGHT,color:ACCENT,fontSize:12,cursor:"pointer",fontWeight:500,whiteSpace:"nowrap"}}>📍 지도 선택</button></div>{form.tradeLat&&<div style={{fontSize:11,color:ACCENT,marginTop:4}}>📍 위치 선택 완료</div>}</div>
+              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>거래 희망 장소</div><div style={{display:"flex",gap:6}}><input value={form.tradePlace} onChange={e=>setForm(p=>({...p,tradePlace:e.target.value,tradeLat:null,tradeLng:null}))} placeholder="예: 대학로 마로니에공원 앞" style={{...inp,flex:1}}/><button type="button" onClick={()=>{setShowMapPicker(true);loadKakaoSDK(()=>setMapPickerLoaded(true));}} style={{flexShrink:0,padding:"0 12px",borderRadius:10,border:`1px solid ${ACCENT}`,background:LIGHT,color:ACCENT,fontSize:12,cursor:"pointer",fontWeight:500,whiteSpace:"nowrap"}}>📍 지도 선택</button></div>{form.tradeLat&&<div style={{fontSize:11,color:ACCENT,marginTop:4}}>📍 위치 선택 완료</div>}</div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>설명</div><textarea value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="물건 상태, 주의사항 등" rows={3} style={{...inp,resize:"none"}}/></div>
               <button onClick={submitItem} style={{width:"100%",height:46,borderRadius:12,border:"none",background:form.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:80}}>{editItem?"수정 완료":"올리기"}</button>
             </>
