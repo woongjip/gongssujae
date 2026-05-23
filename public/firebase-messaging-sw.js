@@ -10,6 +10,24 @@ firebase.initializeApp({
   appId: "1:779975780698:web:6d82afbd89c7fb5d0cab63"
 });
 
-// FCM 초기화만 수행. notification 페이로드가 있으면 FCM이 자동으로 알림을 표시하므로
-// onBackgroundMessage에서 showNotification을 별도 호출하지 않는다 (중복 방지).
-firebase.messaging();
+const messaging = firebase.messaging();
+
+// onBackgroundMessage를 등록하면 FCM이 자동 알림 표시를 중단하고 이 핸들러에 위임한다.
+// 알림 표시 + 앱 아이콘 뱃지 갱신을 함께 처리한다.
+messaging.onBackgroundMessage((payload) => {
+  const title = payload.notification?.title || '공쓰재 새 메시지';
+  const body  = payload.notification?.body  || '';
+
+  self.registration.showNotification(title, {
+    body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [200, 100, 200],
+    data: payload.data || {},
+  });
+
+  // 앱이 닫혀 있을 때 뱃지 표시 (정확한 개수는 앱 열릴 때 재설정됨)
+  if (self.registration.setBadge) {
+    self.registration.setBadge();
+  }
+});

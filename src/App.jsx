@@ -448,6 +448,14 @@ export default function App(){
     const ls=parseInt(localStorage.getItem(`chatRead_${r.id}`)||"0");
     return(r.updatedAt?.seconds||0)*1000>ls;
   }).length,[chatRooms,activeChat,currentUser]);
+
+  // ── 앱 아이콘 뱃지 (App Badging API, iOS 16.4+) ──
+  useEffect(()=>{
+    if(!navigator.setAppBadge)return;
+    if(unreadChatCount>0)navigator.setAppBadge(unreadChatCount);
+    else navigator.clearAppBadge();
+  },[unreadChatCount]);
+
   const activeChatRoom=useMemo(()=>chatRooms.find(r=>r.id===activeChat),[chatRooms,activeChat]);
   const activeChatLinked=useMemo(()=>{const id=activeChatRoom?.itemId;if(!id)return null;return items.find(i=>i.id===id)||jobs.find(j=>j.id===id)||null;},[activeChatRoom,items,jobs]);
   const catStats=useMemo(()=>ITEM_CATS_ALL.map(c=>({label:c,value:items.filter(i=>i.category?.includes(c)).length})),[items]);
