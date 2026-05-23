@@ -12,19 +12,24 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// onBackgroundMessage를 등록하면 FCM이 자동 알림 표시를 중단하고 이 핸들러에 위임한다.
-// 알림 표시 + 앱 아이콘 뱃지 갱신을 함께 처리한다.
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || '공쓰재 새 메시지';
-  const body  = payload.notification?.body  || '';
+  // iOS PWA: APNS가 notification 페이로드를 받아 OS 레벨에서 이미 알림을 표시한다.
+  // 여기서 showNotification을 추가로 호출하면 중복이 되므로 건너뛴다.
+  // Android/Chrome: onBackgroundMessage 등록 시 FCM이 자동 표시를 억제하므로
+  // 직접 showNotification을 호출해야 알림이 뜬다.
+  const isIOS = /iPhone|iPad|iPod/.test(self.navigator.userAgent);
 
-  self.registration.showNotification(title, {
-    body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    vibrate: [200, 100, 200],
-    data: payload.data || {},
-  });
+  if (!isIOS) {
+    const title = payload.notification?.title || '공쓰재 새 메시지';
+    const body  = payload.notification?.body  || '';
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      vibrate: [200, 100, 200],
+      data: payload.data || {},
+    });
+  }
 
   // 앱이 닫혀 있을 때 뱃지 표시 (정확한 개수는 앱 열릴 때 재설정됨)
   if (self.registration.setBadge) {
