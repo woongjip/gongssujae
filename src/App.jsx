@@ -223,6 +223,12 @@ export default function App(){
     return()=>{u1();u2();};
   },[isAdmin,currentUser]);
 
+  // 채팅방을 보는 중 새 메시지 도착 시 즉시 다시 읽음 처리.
+  // 상대방의 increment가 내 리셋보다 늦게 반영돼도 0으로 유지된다.
+  useEffect(()=>{
+    if(screen==="chat"&&activeChat&&currentUser&&messages.length>0)markChatRead(activeChat);
+  },[messages]);
+
   useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"});},[messages]);
   useEffect(()=>{if(screen==="home"&&listRef.current)setTimeout(()=>{listRef.current.scrollTop=scrollPos.current;},30);},[screen]);
 
@@ -234,10 +240,11 @@ export default function App(){
   },[items]);
 
   // ── 채팅 읽음 처리 ──
+  // currentUser를 의존성에 포함: 로그인 정보가 늦게 채워져도 markChatRead가 재실행된다.
   useEffect(()=>{
-    if(screen!=="chat"||!activeChat)return;
+    if(screen!=="chat"||!activeChat||!currentUser)return;
     markChatRead(activeChat);
-  },[screen,activeChat]);
+  },[screen,activeChat,currentUser]);
 
   useEffect(()=>{
     if(!userProfile)return;
