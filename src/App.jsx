@@ -295,6 +295,21 @@ export default function App(){
     if(!currentUser||!chatId)return;
     localStorage.setItem(`chatRead_${chatId}`,Date.now().toString());
     updateDoc(doc(db,"chats",chatId),{[`lastRead.${currentUser.uid}`]:serverTimestamp()}).catch(()=>{});
+    // Firestore 왕복을 기다리지 않고 즉시 뱃지를 보정한다.
+    // 방금 읽은 chatId는 읽음으로 간주해 제외하고 나머지 안 읽은 방 수를 계산한다.
+    if(navigator.setAppBadge){
+      const uid=currentUser.uid;
+      const now=Date.now();
+      const remaining=chatRooms.filter(r=>{
+        if(!r.lastMessage||r.id===chatId)return false;
+        const myLastRead=uid?r?.lastRead?.[uid]:null;
+        if(myLastRead)return(r.updatedAt?.seconds||0)>(myLastRead?.seconds||0);
+        const ls=parseInt(localStorage.getItem(`chatRead_${r.id}`)||"0");
+        return(r.updatedAt?.seconds||0)*1000>ls;
+      }).length;
+      if(remaining>0)navigator.setAppBadge(remaining);
+      else navigator.clearAppBadge();
+    }
   }
 
   async function sendMsg(){
@@ -454,6 +469,18 @@ export default function App(){
     if(!navigator.setAppBadge)return;
     if(unreadChatCount>0)navigator.setAppBadge(unreadChatCount);
     else navigator.clearAppBadge();
+  },[unreadChatCount]);
+
+  // 백그라운드→포그라운드 복귀 시 뱃지 재보정 (iOS PWA onSnapshot 재연결 지연 대응)
+  useEffect(()=>{
+    if(!navigator.setAppBadge)return;
+    const onVisible=()=>{
+      if(document.visibilityState!=="visible")return;
+      if(unreadChatCount>0)navigator.setAppBadge(unreadChatCount);
+      else navigator.clearAppBadge();
+    };
+    document.addEventListener("visibilitychange",onVisible);
+    return()=>document.removeEventListener("visibilitychange",onVisible);
   },[unreadChatCount]);
 
   const activeChatRoom=useMemo(()=>chatRooms.find(r=>r.id===activeChat),[chatRooms,activeChat]);
