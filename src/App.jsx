@@ -153,7 +153,6 @@ export default function App(){
   const scrollPos=useRef(0);
   const chatEnd=useRef(null);
   const logoTimer=useRef(null);
-  const chatRoomsLoaded=useRef(false);
 
   // ── Firebase Auth listener ──
   useEffect(()=>{
@@ -245,19 +244,6 @@ export default function App(){
     setProfileEdit({name:userProfile.name||"",phone:userProfile.phone||"",address:userProfile.address||"",affiliation:userProfile.affiliation||"",interests:userProfile.interests||[]});
   },[userProfile?.name,userProfile?.phone,userProfile?.address,userProfile?.affiliation,userProfile?.interests]);
 
-  // ── 새 채팅 메시지 브라우저 알림 ──
-  useEffect(()=>{
-    if(!chatRooms.length){chatRoomsLoaded.current=false;return;}
-    if(!chatRoomsLoaded.current){chatRoomsLoaded.current=true;return;}
-    chatRooms.forEach(room=>{
-      if(room.id===activeChat||!room.lastMessage)return;
-      const lastRead=parseInt(localStorage.getItem(`chatRead_${room.id}`)||"0");
-      const msgTime=(room.updatedAt?.seconds||0)*1000;
-      if(msgTime>lastRead&&Notification.permission==="granted"){
-        new Notification("새 메시지",{body:room.lastMessage,icon:"/icon-192.png",tag:room.id});
-      }
-    });
-  },[chatRooms]);
 
   // ── Auth functions ──
   async function handleLogin(){

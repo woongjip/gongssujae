@@ -10,14 +10,6 @@ firebase.initializeApp({
   appId: "1:779975780698:web:6d82afbd89c7fb5d0cab63"
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const { title, body } = payload.notification;
-  self.registration.showNotification(title, {
-    body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    vibrate: [200, 100, 200]
-  });
-});
+// FCM 초기화만 수행. notification 페이로드가 있으면 FCM이 자동으로 알림을 표시하므로
+// onBackgroundMessage에서 showNotification을 별도 호출하지 않는다 (중복 방지).
+firebase.messaging();
