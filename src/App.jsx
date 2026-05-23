@@ -16,7 +16,7 @@ const INTERESTS=["조명","무대","음향","분장","의상","소품","연출",
 const REGIONS=["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 마포구","서울 강남구","서울 서초구","서울 송파구","서울 강동구","서울 관악구","서울 동작구","서울 영등포구","서울 강서구","서울 은평구","서울 서대문구","서울 성북구","서울 노원구","서울 도봉구","서울 강북구","서울 양천구","서울 구로구","서울 금천구","서울 중랑구","서울 광진구","서울 동대문구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","대구 중구","대구 동구","대구 서구","인천 중구","인천 동구","인천 미추홀구","인천 연수구","광주 동구","광주 서구","광주 남구","광주 북구","대전 동구","대전 중구","대전 서구","대전 유성구","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안양시","경기 남양주시"];
 const ADMIN_PW="admin1234";
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:""};
-const emptyJform={title:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
+const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
 // index.html에서 SDK를 로드했으므로 준비될 때까지만 폴링
 function loadKakaoSDK(cb){
@@ -356,14 +356,14 @@ export default function App(){
 
   async function submitJob(){
     if(!jform.title||!currentUser)return;
-    const data={...jform,org:editJob?.org||userProfile?.affiliation||userProfile?.name||"나",icon:editJob?.icon||"📋",sellerId:currentUser.uid};
+    const data={...jform,org:jform.org||userProfile?.affiliation||userProfile?.name||"나",icon:editJob?.icon||"📋",sellerId:currentUser.uid};
     if(editJob){await updateDoc(doc(db,"jobs",editJob.id),{...data,createdAt:editJob.createdAt});}
     else{await addDoc(collection(db,"jobs"),{...data,createdAt:serverTimestamp()});}
     setEditJob(null);setJform(emptyJform);setPosted(true);
     setTimeout(()=>{setPosted(false);setMainTab("jobs");goHome();},1200);
   }
 
-  function startEditJob(job){setJform({title:job.title,field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});setEditJob(job);setPostMode("job");go("post","post");}
+  function startEditJob(job){setJform({title:job.title,org:job.org||"",field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});setEditJob(job);setPostMode("job");go("post","post");}
   async function changeJobStatus(id,s){await updateDoc(doc(db,"jobs",id),{jobStatus:s});setSelJob(p=>p?{...p,jobStatus:s}:p);}
   async function toggleCat(c){setForm(p=>({...p,category:p.category.includes(c)?p.category.filter(x=>x!==c):[...p.category,c]}));}
   async function handlePhotos(e){for(const file of Array.from(e.target.files)){const r=await resizeImage(file);setForm(p=>({...p,photos:[...p.photos,r]}));}}
@@ -753,7 +753,7 @@ export default function App(){
       {/* 하단 네비게이션 */}
       {screen!=="admin"&&(<div style={{position:"absolute",bottom:0,left:0,right:0,height:64,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50}}>
         <button style={tb("home")} onClick={goHome}><i className="ti ti-home" style={tic("home")}/>홈</button>
-        <button style={tb("post")} onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform(emptyJform);setPostMode("item");go("post","post");}}>
+        <button style={tb("post")} onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform({...emptyJform,org:userProfile?.affiliation||""});setPostMode("item");go("post","post");}}>
           <div style={{width:44,height:44,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-24}}><i className="ti ti-plus" style={{fontSize:22,color:"#fff"}}/></div>
           <span style={{marginTop:2}}>올리기</span>
         </button>
