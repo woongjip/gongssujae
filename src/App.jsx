@@ -129,6 +129,8 @@ export default function App(){
   const [boostToast,setBoostToast]=useState(false);
   const [showPrefR,setShowPrefR]=useState(false);
   const [prefRSearch,setPrefRSearch]=useState("");
+  const [profileEdit,setProfileEdit]=useState({name:"",phone:"",address:"",affiliation:"",interests:[]});
+  const [profileSaved,setProfileSaved]=useState(false);
   const [isAdmin,setIsAdmin]=useState(false);
   const [adminTab,setAdminTab]=useState("dashboard");
   const [showAdminLogin,setShowAdminLogin]=useState(false);
@@ -230,6 +232,11 @@ export default function App(){
     if(screen!=="chat"||!activeChat)return;
     localStorage.setItem(`chatRead_${activeChat}`,Date.now().toString());
   },[screen,activeChat]);
+
+  useEffect(()=>{
+    if(!userProfile)return;
+    setProfileEdit({name:userProfile.name||"",phone:userProfile.phone||"",address:userProfile.address||"",affiliation:userProfile.affiliation||"",interests:userProfile.interests||[]});
+  },[userProfile?.name,userProfile?.phone,userProfile?.address,userProfile?.affiliation,userProfile?.interests]);
 
   // ── 새 채팅 메시지 브라우저 알림 ──
   useEffect(()=>{
@@ -701,6 +708,21 @@ export default function App(){
             <div style={{padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5"}}>
               <div style={{fontSize:12,color:"#aaa",marginBottom:6}}>📍 선호 지역</div>
               <div style={{position:"relative"}}><input value={userProfile?.preferredRegion||""} readOnly onClick={()=>setShowPrefR(true)} placeholder="지역 선택" style={{...inp,cursor:"pointer",fontSize:13,color:userProfile?.preferredRegion?"#1a1a1a":"#aaa"}}/>{showPrefR&&(<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}><div style={{padding:"8px 12px",borderBottom:"0.5px solid #f0f0f0",position:"sticky",top:0,background:"#fff"}}><input value={prefRSearch} onChange={e=>setPrefRSearch(e.target.value)} placeholder="지역 검색" style={{width:"100%",border:"none",outline:"none",fontSize:13}} autoFocus/></div><div onClick={()=>{updateMyProfile({preferredRegion:""});setShowPrefR(false);}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",color:"#aaa",borderBottom:"0.5px solid #f9f9f9"}}>선택 안함</div>{filtPrefR.slice(0,20).map(r=>(<div key={r} onClick={()=>{updateMyProfile({preferredRegion:r});setShowPrefR(false);setPrefRSearch("");}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f9f9f9",background:userProfile?.preferredRegion===r?LIGHT:"#fff",color:userProfile?.preferredRegion===r?ACCENT:"#333"}}>{r}</div>))}</div>)}</div>
+            </div>
+            <div style={{padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5"}}>
+              <div style={{fontSize:12,color:"#aaa",marginBottom:10}}>프로필 정보</div>
+              {[["이름","name","예: 김민준","text"],["전화번호","phone","010-0000-0000","tel"],["주소","address","예: 서울 마포구","text"],["소속","affiliation","예: 극단 파도","text"]].map(([label,key,ph,type])=>(
+                <div key={key} style={{marginBottom:10}}>
+                  <div style={{fontSize:11,color:"#888",marginBottom:4}}>{label}</div>
+                  <input value={profileEdit[key]} onChange={e=>setProfileEdit(p=>({...p,[key]:e.target.value}))} placeholder={ph} type={type} style={{...inp,fontSize:13}}/>
+                </div>
+              ))}
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:11,color:"#888",marginBottom:6}}>관심 분야</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{INTERESTS.map(i=>{const a=profileEdit.interests.includes(i);return(<button key={i} onClick={()=>setProfileEdit(p=>({...p,interests:a?p.interests.filter(x=>x!==i):[...p.interests,i]}))} style={{padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{i}</button>);})}</div>
+              </div>
+              <button onClick={async()=>{await updateMyProfile({name:profileEdit.name,phone:profileEdit.phone,address:profileEdit.address,affiliation:profileEdit.affiliation,interests:profileEdit.interests});setProfileSaved(true);setTimeout(()=>setProfileSaved(false),2000);}} style={{width:"100%",height:42,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer",marginTop:4}}>저장</button>
+              {profileSaved&&<div style={{textAlign:"center",fontSize:12,color:ACCENT,marginTop:8,fontWeight:500}}>저장되었습니다</div>}
             </div>
             {[["알림 설정","ti-bell"],["거래 내역","ti-repeat"]].map(([l,ic])=>(<div key={l} onClick={()=>{if(l==="알림 설정")go("notify","");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className={`ti ${ic}`} style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>{l}</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>))}
             <div onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:10,padding:"16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}><i className="ti ti-logout" style={{fontSize:18,color:"#e25"}}/><span style={{fontSize:14,color:"#e25"}}>로그아웃</span></div>
