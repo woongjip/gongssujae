@@ -18,7 +18,7 @@ const ADMIN_PW="admin1234";
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||('ontouchstart' in window);
 const shellStyle=isMobile
   ?{width:"100%",fontFamily:"sans-serif",background:"#fff",position:"relative",overflow:"hidden"}
-  :{maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,position:"relative"};
+  :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,position:"relative"};
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:""};
 const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
