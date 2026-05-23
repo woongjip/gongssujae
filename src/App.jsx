@@ -294,19 +294,18 @@ export default function App(){
   function markChatRead(chatId){
     if(!currentUser||!chatId)return;
     localStorage.setItem(`chatRead_${chatId}`,Date.now().toString());
-    updateDoc(doc(db,"chats",chatId),{[`lastRead.${currentUser.uid}`]:serverTimestamp()}).catch(()=>{});
-    // Firestore 왕복을 기다리지 않고 즉시 뱃지를 보정한다.
-    // 방금 읽은 chatId는 읽음으로 간주해 제외하고 나머지 안 읽은 방 수를 계산한다.
+    updateDoc(doc(db,"chats",chatId),{
+      [`lastRead.${currentUser.uid}`]:serverTimestamp(),
+      [`unreadCount.${currentUser.uid}`]:0,
+    }).catch(()=>{});
+    // Firestore 왕복 전에 즉시 뱃지를 보정한다.
+    // 방금 읽은 방의 unreadCount는 0으로 간주하고 나머지를 합산한다.
     if(navigator.setAppBadge){
       const uid=currentUser.uid;
-      const now=Date.now();
-      const remaining=chatRooms.filter(r=>{
-        if(!r.lastMessage||r.id===chatId)return false;
-        const myLastRead=uid?r?.lastRead?.[uid]:null;
-        if(myLastRead)return(r.updatedAt?.seconds||0)>(myLastRead?.seconds||0);
-        const ls=parseInt(localStorage.getItem(`chatRead_${r.id}`)||"0");
-        return(r.updatedAt?.seconds||0)*1000>ls;
-      }).length;
+      const remaining=chatRooms.reduce((sum,r)=>{
+        if(r.id===chatId)return sum;
+        return sum+(r.unreadCount?.[uid]||0);
+      },0);
       if(remaining>0)navigator.setAppBadge(remaining);
       else navigator.clearAppBadge();
     }
@@ -316,7 +315,10 @@ export default function App(){
     if(!chatMsg.trim()||!activeChat||!currentUser)return;
     const text=chatMsg;setChatMsg("");
     await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:currentUser.uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
-    await updateDoc(doc(db,"chats",activeChat),{lastMessage:text,updatedAt:serverTimestamp()});
+    const recipientId=activeChatRoom?.participants?.find(p=>p!==currentUser.uid);
+    const msgUpdate={lastMessage:text,updatedAt:serverTimestamp()};
+    if(recipientId)msgUpdate[`unreadCount.${recipientId}`]=increment(1);
+    await updateDoc(doc(db,"chats",activeChat),msgUpdate);
     markChatRead(activeChat);
   }
 
@@ -455,33 +457,33 @@ export default function App(){
   const myItems=useMemo(()=>items.filter(i=>i.sellerId===currentUser?.uid),[items,currentUser]);
   const upcomingEnds=useMemo(()=>items.filter(i=>i.showEndDate&&new Date(i.showEndDate)>=new Date()),[items]);
   const filtAdminUsers=useMemo(()=>adminUserQ?allUsers.filter(u=>u.name?.includes(adminUserQ)||u.affiliation?.includes(adminUserQ)):allUsers,[allUsers,adminUserQ]);
-  const unreadChatCount=useMemo(()=>chatRooms.filter(r=>{
-    if(!r.lastMessage||r.id===activeChat)return false;
+  const unreadMsgCount=useMemo(()=>{
     const uid=currentUser?.uid;
-    const myLastRead=uid?r?.lastRead?.[uid]:null;
-    if(myLastRead)return(r.updatedAt?.seconds||0)>(myLastRead?.seconds||0);
-    const ls=parseInt(localStorage.getItem(`chatRead_${r.id}`)||"0");
-    return(r.updatedAt?.seconds||0)*1000>ls;
-  }).length,[chatRooms,activeChat,currentUser]);
+    if(!uid)return 0;
+    return chatRooms.reduce((sum,r)=>{
+      if(r.id===activeChat)return sum;
+      return sum+(r.unreadCount?.[uid]||0);
+    },0);
+  },[chatRooms,activeChat,currentUser]);
 
   // ── 앱 아이콘 뱃지 (App Badging API, iOS 16.4+) ──
   useEffect(()=>{
     if(!navigator.setAppBadge)return;
-    if(unreadChatCount>0)navigator.setAppBadge(unreadChatCount);
+    if(unreadMsgCount>0)navigator.setAppBadge(unreadMsgCount);
     else navigator.clearAppBadge();
-  },[unreadChatCount]);
+  },[unreadMsgCount]);
 
   // 백그라운드→포그라운드 복귀 시 뱃지 재보정 (iOS PWA onSnapshot 재연결 지연 대응)
   useEffect(()=>{
     if(!navigator.setAppBadge)return;
     const onVisible=()=>{
       if(document.visibilityState!=="visible")return;
-      if(unreadChatCount>0)navigator.setAppBadge(unreadChatCount);
+      if(unreadMsgCount>0)navigator.setAppBadge(unreadMsgCount);
       else navigator.clearAppBadge();
     };
     document.addEventListener("visibilitychange",onVisible);
     return()=>document.removeEventListener("visibilitychange",onVisible);
-  },[unreadChatCount]);
+  },[unreadMsgCount]);
 
   const activeChatRoom=useMemo(()=>chatRooms.find(r=>r.id===activeChat),[chatRooms,activeChat]);
   const activeChatLinked=useMemo(()=>{const id=activeChatRoom?.itemId;if(!id)return null;return items.find(i=>i.id===id)||jobs.find(j=>j.id===id)||null;},[activeChatRoom,items,jobs]);
@@ -799,7 +801,7 @@ export default function App(){
         <button style={tb("chatlist")} onClick={()=>go("chatlist","chatlist")}>
           <div style={{position:"relative",display:"inline-flex"}}>
             <i className="ti ti-message-circle" style={tic("chatlist")}/>
-            {unreadChatCount>0&&<span style={{position:"absolute",top:-4,right:-6,background:"#e25",color:"#fff",borderRadius:10,fontSize:9,padding:"0 4px",lineHeight:"16px",minWidth:14,textAlign:"center",fontWeight:600}}>{unreadChatCount}</span>}
+            {unreadMsgCount>0&&<span style={{position:"absolute",top:-4,right:-6,background:"#e25",color:"#fff",borderRadius:10,fontSize:9,padding:"0 4px",lineHeight:"16px",minWidth:14,textAlign:"center",fontWeight:600}}>{unreadMsgCount}</span>}
           </div>
           채팅
         </button>
