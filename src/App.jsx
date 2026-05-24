@@ -159,7 +159,9 @@ export default function App(){
           const snap=await getDoc(doc(db,"users",user.uid));
           if(snap.exists()){
             setUserProfile(snap.data());
-            setIsAdmin(snap.data()?.isAdmin===true);
+            const admin=snap.data()?.isAdmin===true;
+            setIsAdmin(admin);
+            console.log("[auth] uid:",user.uid,"isAdmin from getDoc:",admin,snap.data()?.isAdmin);
           }
           registerFCMToken(user.uid);
         }catch(e){console.log("profile load:",e);}
@@ -175,7 +177,9 @@ export default function App(){
   useEffect(()=>{
     if(!currentUser)return;
     const unsub=onSnapshot(doc(db,"users",currentUser.uid),snap=>{
-      setIsAdmin(snap.data()?.isAdmin===true);
+      const admin=snap.data()?.isAdmin===true;
+      setIsAdmin(admin);
+      console.log("[onSnapshot users] uid:",currentUser.uid,"isAdmin:",admin,snap.data()?.isAdmin);
     });
     return()=>unsub();
   },[currentUser]);
