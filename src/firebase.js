@@ -41,9 +41,7 @@ export async function registerFCMToken(uid) {
     if (permission !== "granted") return;
     const token = await getToken(msg, { vapidKey: VAPID_KEY });
     if (!token) return;
-    // 같은 토큰이 다른 계정에 남아있으면 먼저 제거한다.
-    const dup = await getDocs(query(collection(db, "users"), where("fcmToken", "==", token)));
-    await Promise.all(dup.docs.filter(d => d.id !== uid).map(d => updateDoc(d.ref, { fcmToken: deleteField() })));
+    // 중복 토큰 제거는 서버(onFcmTokenUpdated Cloud Function)가 처리한다.
     await updateDoc(doc(db, "users", uid), { fcmToken: token });
   } catch (e) { console.log("FCM 등록 실패:", e); }
 }

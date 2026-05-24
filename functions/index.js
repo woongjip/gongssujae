@@ -1,4 +1,4 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
@@ -80,3 +80,59 @@ exports.onNewMessage = onDocumentCreated(
     });
   }
 );
+
+// FCM 토큰 중복 정리: 같은 토큰이 다른 계정에 남아있으면 서버에서 제거
+exports.onFcmTokenUpdated = onDocumentUpdated("users/{uid}", async (event) => {
+  const before = event.data.before.data()?.fcmToken;
+  const after  = event.data.after.data()?.fcmToken;
+  // 토큰이 새로 생기거나 바뀐 경우만 처리
+  if (!after || after === before) return;
+
+  const uid = event.params.uid;
+  const snap = await admin.firestore()
+    .collection("users")
+    .where("fcmToken", "==", after)
+    .get();
+
+  const stale = snap.docs.filter(d => d.id !== uid);
+  if (stale.length === 0) return;
+
+  await Promise.all(stale.map(d => d.ref.update({ fcmToken: admin.firestore.FieldValue.delete() })));
+  console.log("[onFcmTokenUpdated] 중복 토큰 제거:", stale.map(d => d.id));
+});
+
+// 거래 후기 → 판매자 공연온도 업데이트
+exports.onReviewCreated = onDocumentWritten("reviews/{reviewId}", async (event) => {
+  // 새로 생성된 문서만 처리 (중복 평가 방지)
+  if (event.data.before.exists()) {
+    console.log("[onReviewCreated] 이미 존재하는 리뷰 — 중복 무시:", event.params.reviewId);
+    return;
+  }
+
+  const review = event.data.after.data();
+  const { revieweeId, delta } = review;
+
+  if (!revieweeId || delta === undefined) {
+    console.error("[onReviewCreated] 필수 필드 누락:", review);
+    return;
+  }
+
+  const userRef = admin.firestore().doc(`users/${revieweeId}`);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    console.error("[onReviewCreated] reviewee 문서 없음:", revieweeId);
+    return;
+  }
+
+  const currentTemp = userSnap.data()?.temp ?? 36.5;
+  const newTemp = Math.max(30, Math.min(50, +((currentTemp + delta).toFixed(1))));
+
+  await userRef.update({ temp: newTemp });
+  console.log("[onReviewCreated]", JSON.stringify({
+    reviewId: event.params.reviewId,
+    revieweeId,
+    currentTemp,
+    delta,
+    newTemp,
+  }));
+});

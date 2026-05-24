@@ -382,10 +382,18 @@ export default function App(){
   }
 
   async function submitReview(positive){
-    const delta=positive?0.3:-0.3;
-    const newTemp=Math.max(30,Math.min(50,+((userProfile?.temp||36.5)+delta).toFixed(1)));
-    await updateDoc(doc(db,"users",currentUser.uid),{temp:newTemp});
-    setUserProfile(p=>({...p,temp:newTemp}));setReviewModal(null);
+    if(!reviewModal||!currentUser)return;
+    // 리뷰 기록만 남기고 temp 업데이트는 Cloud Function(onReviewCreated)이 처리.
+    // 문서 ID = itemId_reviewerId → 같은 거래 중복 평가 방지
+    await setDoc(doc(db,"reviews",`${reviewModal.id}_${currentUser.uid}`),{
+      itemId:reviewModal.id,
+      reviewerId:currentUser.uid,
+      revieweeId:reviewModal.sellerId,
+      positive,
+      delta:positive?0.3:-0.3,
+      createdAt:serverTimestamp(),
+    }).catch(()=>{});
+    setReviewModal(null);
   }
 
   async function submitJob(){
