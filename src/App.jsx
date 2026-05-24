@@ -148,6 +148,7 @@ export default function App(){
   const [reports,setReports]=useState([]);
   const [showMapPicker,setShowMapPicker]=useState(false);
   const [mapPickerLoaded,setMapPickerLoaded]=useState(false);
+  const [chatRecipientId,setChatRecipientId]=useState(null);
 
   const listRef=useRef(null);
   const scrollPos=useRef(0);
@@ -293,6 +294,7 @@ export default function App(){
     if(!currentUser)return;
     if(sellerId===currentUser.uid){alert("본인 게시글에는 채팅할 수 없습니다");return;}
     const chatId=[currentUser.uid,sellerId].sort().join("_")+"_"+itemId;
+    setChatRecipientId(sellerId);
     setActiveChat(chatId);setChatLabel(itemTitle);go("chat","chatlist");
     const chatRef=doc(db,"chats",chatId);
     const snap=await getDoc(chatRef);
@@ -325,7 +327,12 @@ export default function App(){
   async function sendMsg(){
     if(!chatMsg.trim()||!activeChat||!currentUser)return;
     const text=chatMsg;setChatMsg("");
-    const recipientId=activeChatRoom?.participants?.find(p=>p!==currentUser.uid);
+    // recipientId 우선순위: (a) chatRooms 구독 데이터 → (b) chatId 파싱 → (c) openChat 저장값
+    const uid=currentUser.uid;
+    const fromParticipants=activeChatRoom?.participants?.find(p=>p!==uid);
+    const fromChatId=(()=>{const parts=activeChat.split("_");const a=parts[0],b=parts[1];return a!==uid?a:b!==uid?b:undefined;})();
+    const recipientId=fromParticipants||fromChatId||chatRecipientId||undefined;
+    console.log("[sendMsg]",{activeChat,uid,fromParticipants,fromChatId,chatRecipientId,recipientId});
     // increment를 addDoc 전에 먼저 커밋해야 Cloud Functions가 읽을 때 반영된 값을 볼 수 있다.
     if(recipientId)await updateDoc(doc(db,"chats",activeChat),{[`unreadCount.${recipientId}`]:increment(1)});
     await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:currentUser.uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
