@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect, Fragment } from "react";
+import { useState, useMemo, useRef, useEffect, Fragment, useCallback } from "react";
+import Cropper from "react-easy-crop";
 import {
   db, auth, registerFCMToken, unregisterFCMToken,
   collection, addDoc, updateDoc, deleteDoc, doc,
@@ -50,6 +51,21 @@ async function resizeImage(file){
       img.src=e.target.result;
     };
     reader.readAsDataURL(file);
+  });
+}
+
+async function getCroppedImg(imageSrc,pixelCrop){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      canvas.width=600;canvas.height=600;
+      const ctx=canvas.getContext("2d");
+      ctx.drawImage(img,pixelCrop.x,pixelCrop.y,pixelCrop.width,pixelCrop.height,0,0,600,600);
+      resolve(canvas.toDataURL("image/jpeg",0.65));
+    };
+    img.onerror=reject;
+    img.src=imageSrc;
   });
 }
 
@@ -145,6 +161,11 @@ export default function App(){
   const [showMapPicker,setShowMapPicker]=useState(false);
   const [mapPickerLoaded,setMapPickerLoaded]=useState(false);
   const [chatRecipientId,setChatRecipientId]=useState(null);
+  const [cropQueue,setCropQueue]=useState([]);
+  const [cropSrc,setCropSrc]=useState(null);
+  const [cropPx,setCropPx]=useState({x:0,y:0,width:0,height:0});
+  const [cropZoom,setCropZoom]=useState(1);
+  const [cropPos,setCropPos]=useState({x:0,y:0});
 
   const listRef=useRef(null);
   const scrollPos=useRef(0);
@@ -422,7 +443,34 @@ export default function App(){
   function startEditJob(job){setJform({title:job.title,org:job.org||"",field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});setEditJob(job);setPostMode("job");go("post","post");}
   async function changeJobStatus(id,s){await updateDoc(doc(db,"jobs",id),{jobStatus:s});setSelJob(p=>p?{...p,jobStatus:s}:p);}
   async function toggleCat(c){setForm(p=>({...p,category:p.category.includes(c)?p.category.filter(x=>x!==c):[...p.category,c]}));}
-  async function handlePhotos(e){for(const file of Array.from(e.target.files)){const r=await resizeImage(file);setForm(p=>({...p,photos:[...p.photos,r]}));}}
+  function handlePhotos(e){
+    const files=Array.from(e.target.files);
+    if(!files.length)return;
+    e.target.value="";
+    const readers=files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);}));
+    Promise.all(readers).then(srcs=>{
+      setCropQueue(srcs);
+      setCropSrc(srcs[0]);
+      setCropZoom(1);setCropPos({x:0,y:0});
+    });
+  }
+  async function handleCropConfirm(){
+    try{
+      const dataUrl=await getCroppedImg(cropSrc,cropPx);
+      setForm(p=>({...p,photos:[...p.photos,dataUrl]}));
+    }catch(e){console.error("[crop]",e);}
+    const remaining=cropQueue.slice(1);
+    setCropQueue(remaining);
+    if(remaining.length>0){setCropSrc(remaining[0]);setCropZoom(1);setCropPos({x:0,y:0});}
+    else setCropSrc(null);
+  }
+  function handleCropCancel(){
+    const remaining=cropQueue.slice(1);
+    setCropQueue(remaining);
+    if(remaining.length>0){setCropSrc(remaining[0]);setCropZoom(1);setCropPos({x:0,y:0});}
+    else setCropSrc(null);
+  }
+  const onCropComplete=useCallback((_,px)=>setCropPx(px),[]);
 
   async function toggleUserStatus(uid){const u=allUsers.find(x=>x.id===uid);if(u)await updateDoc(doc(db,"users",uid),{status:u.status==="active"?"suspended":"active"});}
   async function deleteItem(id){await deleteDoc(doc(db,"items",id));}
@@ -860,6 +908,20 @@ export default function App(){
         </div>
       )}
 
+
+      {/* 사진 크롭 모달 */}
+      {cropSrc&&(<div style={{position:"absolute",inset:0,background:"#000",zIndex:300,display:"flex",flexDirection:"column"}}>
+        <div style={{flex:1,position:"relative"}}>
+          <Cropper image={cropSrc} crop={cropPos} zoom={cropZoom} aspect={1} onCropChange={setCropPos} onZoomChange={setCropZoom} onCropComplete={onCropComplete} style={{containerStyle:{borderRadius:0}}}/>
+        </div>
+        <div style={{padding:"12px 16px 8px",background:"#111"}}>
+          <input type="range" min={1} max={3} step={0.01} value={cropZoom} onChange={e=>setCropZoom(Number(e.target.value))} style={{width:"100%",accentColor:ACCENT}}/>
+        </div>
+        <div style={{display:"flex",gap:8,padding:"8px 16px",paddingBottom:"calc(16px + env(safe-area-inset-bottom,0px))",background:"#111"}}>
+          <button onClick={handleCropCancel} style={{flex:1,height:48,borderRadius:12,border:"1px solid #444",background:"transparent",color:"#ccc",fontSize:15,cursor:"pointer"}}>취소</button>
+          <button onClick={handleCropConfirm} style={{flex:2,height:48,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer"}}>확인 {cropQueue.length>1?`(${cropQueue.length}장 남음)`:""}</button>
+        </div>
+      </div>)}
 
       {/* 거래 후기 */}
       {reviewModal&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:200}}><div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px 32px",width:"100%",boxSizing:"border-box"}}><div style={{fontSize:16,fontWeight:600,marginBottom:4}}>거래 후기 — 공연온도</div><div style={{fontSize:13,color:"#888",marginBottom:4}}>"{reviewModal.title}" 거래가 어떠셨나요?</div><div style={{fontSize:11,color:"#bbb",marginBottom:20}}>후기는 🌡️ 공연온도에 반영됩니다</div><div style={{display:"flex",gap:12}}><button onClick={()=>submitReview(true)} style={{flex:1,height:52,borderRadius:14,border:"none",background:LIGHT,color:ACCENT,fontSize:15,fontWeight:600,cursor:"pointer"}}>👍 좋았어요<br/><span style={{fontSize:11,fontWeight:400}}>+0.3°C</span></button><button onClick={()=>submitReview(false)} style={{flex:1,height:52,borderRadius:14,border:"none",background:"#fff0f2",color:"#c62828",fontSize:15,fontWeight:600,cursor:"pointer"}}>👎 별로였어요<br/><span style={{fontSize:11,fontWeight:400}}>-0.3°C</span></button></div><button onClick={()=>setReviewModal(null)} style={{width:"100%",marginTop:12,background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer",padding:"8px 0"}}>건너뛰기</button></div></div>)}
