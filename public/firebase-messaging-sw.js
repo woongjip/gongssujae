@@ -35,6 +35,11 @@ messaging.onBackgroundMessage((payload) => {
     });
   }
 
-  // 뱃지는 apns.aps.badge를 통해 iOS OS가 직접 설정한다.
-  // 여기서 setAppBadge를 추가로 호출하면 뱃지가 2중으로 설정되므로 호출하지 않는다.
+  // iOS PWA는 apns.aps.badge가 아닌 Web Badge API로만 뱃지가 설정된다.
+  // Cloud Functions가 data.badge에 넣어준 정확한 개수로 뱃지를 찍는다.
+  const badge = parseInt(payload.data?.badge || '0', 10);
+  if (navigator.setAppBadge) {
+    if (badge > 0) navigator.setAppBadge(badge);
+    else navigator.clearAppBadge();
+  }
 });

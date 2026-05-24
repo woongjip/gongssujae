@@ -321,11 +321,11 @@ export default function App(){
   async function sendMsg(){
     if(!chatMsg.trim()||!activeChat||!currentUser)return;
     const text=chatMsg;setChatMsg("");
-    await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:currentUser.uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
     const recipientId=activeChatRoom?.participants?.find(p=>p!==currentUser.uid);
-    const msgUpdate={lastMessage:text,updatedAt:serverTimestamp()};
-    if(recipientId)msgUpdate[`unreadCount.${recipientId}`]=increment(1);
-    await updateDoc(doc(db,"chats",activeChat),msgUpdate);
+    // increment를 addDoc 전에 먼저 커밋해야 Cloud Functions가 읽을 때 반영된 값을 볼 수 있다.
+    if(recipientId)await updateDoc(doc(db,"chats",activeChat),{[`unreadCount.${recipientId}`]:increment(1)});
+    await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:currentUser.uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
+    await updateDoc(doc(db,"chats",activeChat),{lastMessage:text,updatedAt:serverTimestamp()});
     markChatRead(activeChat);
   }
 

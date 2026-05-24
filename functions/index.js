@@ -21,16 +21,14 @@ exports.onNewMessage = onDocumentCreated(
     if (!fcmToken) return;
 
     // 수신자의 안 읽은 메시지 총 개수 계산 (unreadCount.[recipientId] 합산)
-    // 클라이언트 increment가 아직 미반영일 수 있으므로 현재 메시지분 +1 보정
+    // sendMsg에서 increment를 addDoc 전에 먼저 커밋하므로 +1 보정 없이 그대로 합산한다.
     const chatsSnap = await admin.firestore()
       .collection("chats")
       .where("participants", "array-contains", recipientId)
       .get();
 
     const unreadMsgCount = chatsSnap.docs.reduce((sum, d) => {
-      const count = d.data().unreadCount?.[recipientId] || 0;
-      // 현재 메시지가 속한 방은 클라이언트 increment 타이밍 차이를 +1로 보정
-      return sum + (d.id === chatId ? count + 1 : count);
+      return sum + (d.data().unreadCount?.[recipientId] || 0);
     }, 0);
 
     await admin.messaging().send({
