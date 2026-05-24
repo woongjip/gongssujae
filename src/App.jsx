@@ -373,7 +373,8 @@ export default function App(){
   async function changeStatus(itemId,status){
     await updateDoc(doc(db,"items",itemId),{status});
     setSelItem(p=>p?{...p,status}:p);
-    if(status==="done"){const item=items.find(i=>i.id===itemId);if(item)setTimeout(()=>setReviewModal(item),400);}
+    // [임시 비활성화] 후기 모달 진입 막음 — 추후 재설계
+    // if(status==="done"){const item=items.find(i=>i.id===itemId);if(item)setTimeout(()=>setReviewModal(item),400);}
   }
 
   async function boostItem(id){
