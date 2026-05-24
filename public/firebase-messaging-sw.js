@@ -35,10 +35,6 @@ messaging.onBackgroundMessage((payload) => {
     });
   }
 
-  // iOS는 apns.aps.badge로 OS가 뱃지를 직접 설정하지만,
-  // navigator.setAppBadge도 함께 호출해 PWA 뱃지를 명시적으로 갱신한다.
-  const badge = parseInt(payload.data?.badge || '1', 10);
-  if (navigator.setAppBadge) {
-    navigator.setAppBadge(badge);
-  }
+  // 뱃지는 apns.aps.badge를 통해 iOS OS가 직접 설정한다.
+  // 여기서 setAppBadge를 추가로 호출하면 뱃지가 2중으로 설정되므로 호출하지 않는다.
 });
