@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import {
-  db, auth, registerFCMToken,
+  db, auth, registerFCMToken, unregisterFCMToken,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, increment,
@@ -275,7 +275,11 @@ export default function App(){
     setAuthBusy(false);
   }
 
-  async function handleLogout(){await signOut(auth);setIsAdmin(false);setAuthStep("splash");}
+  async function handleLogout(){
+    if(currentUser)await unregisterFCMToken(currentUser.uid);
+    await signOut(auth);
+    setIsAdmin(false);setAuthStep("splash");
+  }
 
   function allTerms(v){setTerms({all:v,service:v,privacy:v,age:v});}
 

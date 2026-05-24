@@ -69,6 +69,14 @@ exports.onNewMessage = onDocumentCreated(
       android: {
         notification: { sound: "default", channelId: "chat" },
       },
-    }).catch((err) => console.error("[onNewMessage] FCM 전송 실패:", err));
+    }).catch(async (err) => {
+      console.error("[onNewMessage] FCM 전송 실패:", err?.errorInfo?.code, err?.message);
+      // 무효 토큰이면 users 문서에서 제거한다.
+      const invalid = ["messaging/registration-token-not-registered", "messaging/invalid-argument"];
+      if (invalid.includes(err?.errorInfo?.code)) {
+        await admin.firestore().doc(`users/${recipientId}`).update({ fcmToken: admin.firestore.FieldValue.delete() });
+        console.log("[onNewMessage] 무효 토큰 제거:", recipientId);
+      }
+    });
   }
 );

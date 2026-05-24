@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, getDocs, increment
+  setDoc, getDoc, where, getDocs, increment, deleteField
 } from "firebase/firestore";
 import {
   getAuth, createUserWithEmailAndPassword,
@@ -40,14 +40,28 @@ export async function registerFCMToken(uid) {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return;
     const token = await getToken(msg, { vapidKey: VAPID_KEY });
-    if (token) await updateDoc(doc(db, "users", uid), { fcmToken: token });
+    if (!token) return;
+    // 같은 토큰이 다른 계정에 남아있으면 먼저 제거한다.
+    const dup = await getDocs(query(collection(db, "users"), where("fcmToken", "==", token)));
+    await Promise.all(dup.docs.filter(d => d.id !== uid).map(d => updateDoc(d.ref, { fcmToken: deleteField() })));
+    await updateDoc(doc(db, "users", uid), { fcmToken: token });
   } catch (e) { console.log("FCM 등록 실패:", e); }
+}
+
+export async function unregisterFCMToken(uid) {
+  const msg = await getMessagingInstance();
+  if (!msg) return;
+  try {
+    const token = await getToken(msg, { vapidKey: VAPID_KEY });
+    if (!token) return;
+    await updateDoc(doc(db, "users", uid), { fcmToken: deleteField() });
+  } catch (e) { console.log("FCM 토큰 제거 실패:", e); }
 }
 
 export {
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, getDocs, increment,
+  setDoc, getDoc, where, getDocs, increment, deleteField,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut
 };
