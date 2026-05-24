@@ -14,10 +14,33 @@ exports.onNewMessage = onDocumentCreated(
 
     const { participants, itemTitle } = chatDoc.data();
     const recipientId = participants?.find((uid) => uid !== msg.from);
-    if (!recipientId) return;
+
+    console.log("[onNewMessage]", JSON.stringify({
+      chatId,
+      from: msg.from,
+      participants,
+      recipientId: recipientId || null,
+      senderEqualsRecipient: msg.from === recipientId,
+    }));
+
+    // 안전장치: recipient를 못 찾거나 발신자 본인이면 중단
+    if (!recipientId) {
+      console.log("[onNewMessage] recipientId 없음 — 종료");
+      return;
+    }
+    if (recipientId === msg.from) {
+      console.log("[onNewMessage] recipientId === msg.from — 발신자 본인. 종료");
+      return;
+    }
 
     const userDoc = await admin.firestore().doc(`users/${recipientId}`).get();
     const fcmToken = userDoc.data()?.fcmToken;
+
+    console.log("[onNewMessage]", JSON.stringify({
+      tokenTargetUid: recipientId,
+      hasToken: !!fcmToken,
+    }));
+
     if (!fcmToken) return;
 
     // 수신자의 안 읽은 메시지 총 개수 계산 (unreadCount.[recipientId] 합산)
@@ -30,6 +53,8 @@ exports.onNewMessage = onDocumentCreated(
     const unreadMsgCount = chatsSnap.docs.reduce((sum, d) => {
       return sum + (d.data().unreadCount?.[recipientId] || 0);
     }, 0);
+
+    console.log("[onNewMessage]", JSON.stringify({ unreadMsgCount }));
 
     await admin.messaging().send({
       token: fcmToken,
@@ -44,6 +69,6 @@ exports.onNewMessage = onDocumentCreated(
       android: {
         notification: { sound: "default", channelId: "chat" },
       },
-    }).catch((err) => console.error("FCM 전송 실패:", err));
+    }).catch((err) => console.error("[onNewMessage] FCM 전송 실패:", err));
   }
 );
