@@ -385,14 +385,16 @@ export default function App(){
     if(!reviewModal||!currentUser)return;
     // 리뷰 기록만 남기고 temp 업데이트는 Cloud Function(onReviewCreated)이 처리.
     // 문서 ID = itemId_reviewerId → 같은 거래 중복 평가 방지
-    await setDoc(doc(db,"reviews",`${reviewModal.id}_${currentUser.uid}`),{
-      itemId:reviewModal.id,
-      reviewerId:currentUser.uid,
-      revieweeId:reviewModal.sellerId,
-      positive,
-      delta:positive?0.3:-0.3,
-      createdAt:serverTimestamp(),
-    }).catch(()=>{});
+    try{
+      await setDoc(doc(db,"reviews",`${reviewModal.id}_${currentUser.uid}`),{
+        itemId:reviewModal.id,
+        reviewerId:currentUser.uid,
+        revieweeId:reviewModal.sellerId,
+        positive,
+        delta:positive?0.3:-0.3,
+        createdAt:serverTimestamp(),
+      });
+    }catch(e){console.error("[submitReview] setDoc 실패:",e);}
     setReviewModal(null);
   }
 

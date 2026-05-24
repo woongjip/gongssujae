@@ -104,7 +104,8 @@ exports.onFcmTokenUpdated = onDocumentUpdated("users/{uid}", async (event) => {
 // 거래 후기 → 판매자 공연온도 업데이트
 exports.onReviewCreated = onDocumentWritten("reviews/{reviewId}", async (event) => {
   // 새로 생성된 문서만 처리 (중복 평가 방지)
-  if (event.data.before.exists()) {
+  // exists는 DocumentSnapshot의 boolean 프로퍼티 (메서드 아님)
+  if (event.data.before.exists) {
     console.log("[onReviewCreated] 이미 존재하는 리뷰 — 중복 무시:", event.params.reviewId);
     return;
   }
