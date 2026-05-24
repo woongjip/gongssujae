@@ -14,7 +14,6 @@ const ITEM_CATS=["전체",...ITEM_CATS_ALL];
 const JOB_FIELDS=["전체","조명","무대","음향","분장","영상","기타"];
 const INTERESTS=["조명","무대","음향","분장","의상","소품","연출","기획","배우","스태프"];
 const REGIONS=["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 마포구","서울 강남구","서울 서초구","서울 송파구","서울 강동구","서울 관악구","서울 동작구","서울 영등포구","서울 강서구","서울 은평구","서울 서대문구","서울 성북구","서울 노원구","서울 도봉구","서울 강북구","서울 양천구","서울 구로구","서울 금천구","서울 중랑구","서울 광진구","서울 동대문구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","대구 중구","대구 동구","대구 서구","인천 중구","인천 동구","인천 미추홀구","인천 연수구","광주 동구","광주 서구","광주 남구","광주 북구","대전 동구","대전 중구","대전 서구","대전 유성구","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안양시","경기 남양주시"];
-const ADMIN_PW="admin1234";
 function fmtTime(ts){const d=ts?.toDate?.();if(!d)return"";const now=new Date();const diff=now-d;const m=Math.floor(diff/60000);if(m<1)return"방금 전";if(m<60)return`${m}분 전`;const h=Math.floor(m/60);if(h<24&&d.toDateString()===now.toDateString())return`${h}시간 전`;const yest=new Date(now);yest.setDate(yest.getDate()-1);if(d.toDateString()===yest.toDateString())return"어제";return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`;}
 function fmtMsgTime(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleTimeString("ko-KR",{hour:"numeric",minute:"2-digit",hour12:true});}
 function fmtDateLabel(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});}
@@ -140,9 +139,6 @@ export default function App(){
   const [profileSaved,setProfileSaved]=useState(false);
   const [isAdmin,setIsAdmin]=useState(false);
   const [adminTab,setAdminTab]=useState("dashboard");
-  const [showAdminLogin,setShowAdminLogin]=useState(false);
-  const [adminPw,setAdminPw]=useState("");
-  const [logoTaps,setLogoTaps]=useState(0);
   const [allUsers,setAllUsers]=useState([]);
   const [adminUserQ,setAdminUserQ]=useState("");
   const [reports,setReports]=useState([]);
@@ -153,7 +149,6 @@ export default function App(){
   const listRef=useRef(null);
   const scrollPos=useRef(0);
   const chatEnd=useRef(null);
-  const logoTimer=useRef(null);
 
   // ── Firebase Auth listener ──
   useEffect(()=>{
@@ -162,16 +157,28 @@ export default function App(){
         setCurrentUser(user);
         try{
           const snap=await getDoc(doc(db,"users",user.uid));
-          if(snap.exists()) setUserProfile(snap.data());
+          if(snap.exists()){
+            setUserProfile(snap.data());
+            setIsAdmin(snap.data()?.isAdmin===true);
+          }
           registerFCMToken(user.uid);
         }catch(e){console.log("profile load:",e);}
       }else{
-        setCurrentUser(null);setUserProfile(null);
+        setCurrentUser(null);setUserProfile(null);setIsAdmin(false);
       }
       setAuthLoading(false);
     });
     return()=>unsub();
   },[]);
+
+  // isAdmin 실시간 감시: Firestore에서 isAdmin 필드가 바뀌면 즉시 반영
+  useEffect(()=>{
+    if(!currentUser)return;
+    const unsub=onSnapshot(doc(db,"users",currentUser.uid),snap=>{
+      setIsAdmin(snap.data()?.isAdmin===true);
+    });
+    return()=>unsub();
+  },[currentUser]);
 
   // ── Firestore items ──
   useEffect(()=>{
@@ -413,7 +420,6 @@ export default function App(){
   async function toggleCat(c){setForm(p=>({...p,category:p.category.includes(c)?p.category.filter(x=>x!==c):[...p.category,c]}));}
   async function handlePhotos(e){for(const file of Array.from(e.target.files)){const r=await resizeImage(file);setForm(p=>({...p,photos:[...p.photos,r]}));}}
 
-  function handleLogoTap(){const n=logoTaps+1;if(logoTimer.current)clearTimeout(logoTimer.current);logoTimer.current=setTimeout(()=>setLogoTaps(0),2000);if(n>=5){setLogoTaps(0);setShowAdminLogin(true);return;}setLogoTaps(n);}
   async function toggleUserStatus(uid){const u=allUsers.find(x=>x.id===uid);if(u)await updateDoc(doc(db,"users",uid),{status:u.status==="active"?"suspended":"active"});}
   async function deleteItem(id){await deleteDoc(doc(db,"items",id));}
   async function deleteJob(id){await deleteDoc(doc(db,"jobs",id));}
@@ -621,8 +627,8 @@ export default function App(){
       {screen==="home"&&(<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div style={{padding:"18px 16px 0",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div onClick={handleLogoTap} style={{cursor:"pointer",userSelect:"none"}}>
-              <div style={{fontSize:20,fontWeight:500,color:ACCENT}}>공쓰재{logoTaps>0&&<span style={{fontSize:10,color:"#ccc",marginLeft:4}}>{logoTaps}/5</span>}</div>
+            <div style={{userSelect:"none"}}>
+              <div style={{fontSize:20,fontWeight:500,color:ACCENT}}>공쓰재</div>
               <div style={{fontSize:11,color:"#999",marginTop:1}}>공연에 쓰고 남은 물건과 일자리를 나눕니다</div>
             </div>
             <button onClick={()=>go("notify","")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#888"}}><i className="ti ti-bell"/></button>
@@ -796,7 +802,7 @@ export default function App(){
             </div>
             {[["알림 설정","ti-bell"],["거래 내역","ti-repeat"]].map(([l,ic])=>(<div key={l} onClick={()=>{if(l==="알림 설정")go("notify","");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className={`ti ${ic}`} style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>{l}</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>))}
             <div onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:10,padding:"16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}><i className="ti ti-logout" style={{fontSize:18,color:"#e25"}}/><span style={{fontSize:14,color:"#e25"}}>로그아웃</span></div>
-            <div onClick={()=>setShowAdminLogin(true)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer"}}><span style={{fontSize:11,color:"#e0e0e0"}}>관리자</span></div>
+            {isAdmin&&<div onClick={()=>go("admin")} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer"}}><span style={{fontSize:12,color:ADMIN_C,fontWeight:500}}>🔐 관리자 패널</span></div>}
           </>)}
           {mypageTab==="liked"&&(likedItems.length===0?<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>찜한 물건이 없어요</div>:likedItems.map(item=>(<div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}><div style={{width:64,height:64,borderRadius:10,flexShrink:0,overflow:"hidden",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center"}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:24}}>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:3}}>{item.title}</div><div style={{fontSize:11,color:"#bbb"}}>{item.region}</div><div style={{fontSize:13,fontWeight:500,color:item.price===0?ACCENT:"#1a1a1a",marginTop:4}}>{item.price===0?"무료 나눔":`${item.price?.toLocaleString()}원`}</div></div><button onClick={e=>{e.stopPropagation();toggleLike(item.id,e);}} style={{background:"none",border:"none",cursor:"pointer",color:"#e25",fontSize:18,alignSelf:"center",flexShrink:0}}><i className="ti ti-heart-filled"/></button></div>)))}
           {mypageTab==="myitems"&&(myItems.length===0?<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>등록한 물건이 없어요</div>:myItems.map(item=>(<div key={item.id} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",alignItems:"center"}}><div onClick={()=>goDetail(item)} style={{width:56,height:56,borderRadius:10,flexShrink:0,overflow:"hidden",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:22}}>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>goDetail(item)}><div style={{fontSize:13,fontWeight:500,marginBottom:2}}>{item.title}</div><div style={{fontSize:11,color:item.status==="done"?"#9e9e9e":item.status==="reserved"?"#e65100":ACCENT,fontWeight:500}}>{item.status==="done"?"거래완료":item.status==="reserved"?"예약중":"판매중"}</div></div><div style={{display:"flex",gap:6}}><button onClick={()=>boostItem(item.id)} style={{background:LIGHT,border:"none",borderRadius:8,padding:"4px 8px",fontSize:11,color:ACCENT,cursor:"pointer",fontWeight:500}}>⬆</button><button onClick={()=>startEdit(item)} style={{background:"#f5f5f5",border:"none",borderRadius:8,padding:"4px 8px",fontSize:11,color:"#666",cursor:"pointer"}}>수정</button></div></div>)))}
@@ -850,8 +856,6 @@ export default function App(){
         </div>
       )}
 
-      {/* 관리자 로그인 모달 */}
-      {showAdminLogin&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300}}><div style={{background:"#fff",borderRadius:20,padding:"28px 24px",width:280,boxSizing:"border-box"}}><div style={{fontSize:16,fontWeight:600,color:ADMIN_C,marginBottom:4}}>🔐 관리자 로그인</div><div style={{fontSize:12,color:"#aaa",marginBottom:16}}>비밀번호를 입력하세요</div><input value={adminPw} onChange={e=>setAdminPw(e.target.value)} type="password" placeholder="비밀번호" onKeyDown={e=>{if(e.key==="Enter"){if(adminPw===ADMIN_PW){setIsAdmin(true);setScreen("admin");setShowAdminLogin(false);setAdminPw("");}else{alert("비밀번호가 틀렸습니다.");}}} } style={{...inp,marginBottom:12}}/><button onClick={()=>{if(adminPw===ADMIN_PW){setIsAdmin(true);setScreen("admin");setShowAdminLogin(false);setAdminPw("");}else{alert("비밀번호가 틀렸습니다.");}}} style={{width:"100%",height:44,borderRadius:12,border:"none",background:ADMIN_C,color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer",marginBottom:8}}>확인</button><button onClick={()=>{setShowAdminLogin(false);setAdminPw("");}} style={{width:"100%",background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer",padding:"8px 0"}}>취소</button></div></div>)}
 
       {/* 거래 후기 */}
       {reviewModal&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:200}}><div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px 32px",width:"100%",boxSizing:"border-box"}}><div style={{fontSize:16,fontWeight:600,marginBottom:4}}>거래 후기 — 공연온도</div><div style={{fontSize:13,color:"#888",marginBottom:4}}>"{reviewModal.title}" 거래가 어떠셨나요?</div><div style={{fontSize:11,color:"#bbb",marginBottom:20}}>후기는 🌡️ 공연온도에 반영됩니다</div><div style={{display:"flex",gap:12}}><button onClick={()=>submitReview(true)} style={{flex:1,height:52,borderRadius:14,border:"none",background:LIGHT,color:ACCENT,fontSize:15,fontWeight:600,cursor:"pointer"}}>👍 좋았어요<br/><span style={{fontSize:11,fontWeight:400}}>+0.3°C</span></button><button onClick={()=>submitReview(false)} style={{flex:1,height:52,borderRadius:14,border:"none",background:"#fff0f2",color:"#c62828",fontSize:15,fontWeight:600,cursor:"pointer"}}>👎 별로였어요<br/><span style={{fontSize:11,fontWeight:400}}>-0.3°C</span></button></div><button onClick={()=>setReviewModal(null)} style={{width:"100%",marginTop:12,background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer",padding:"8px 0"}}>건너뛰기</button></div></div>)}
