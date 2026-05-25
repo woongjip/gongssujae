@@ -126,6 +126,7 @@ export default function App(){
   const [selItem,setSelItem]=useState(null);
   const [selJob,setSelJob]=useState(null);
   const [cat,setCat]=useState("전체");
+  const [typeFilter,setTypeFilter]=useState("전체");
   const [fld,setFld]=useState("전체");
   const [q,setQ]=useState("");
   const [items,setItems]=useState([]);
@@ -536,13 +537,17 @@ export default function App(){
 
   // ── Computed ──
   const filtItems=useMemo(()=>{
-    let l=cat==="전체"?items:items.filter(i=>i.category?.includes(cat));
+    let l=items;
+    if(typeFilter==="나눔")l=l.filter(i=>i.postType==="nanumi"&&i.price===0);
+    else if(typeFilter==="구함")l=l.filter(i=>i.postType==="guhami");
+    else if(typeFilter==="판매")l=l.filter(i=>i.postType==="nanumi"&&i.price>0);
     if(showTagFilter)l=l.filter(i=>i.showTag===showTagFilter);
     if(q)l=l.filter(i=>i.title?.includes(q)||i.itemName?.includes(q)||i.region?.includes(q)||i.showTag?.includes(q));
     if(localFirst&&userProfile?.preferredRegion){const city=userProfile.preferredRegion.split(" ")[0];l=[...l.filter(i=>i.region?.startsWith(city)),...l.filter(i=>!i.region?.startsWith(city))];}
     return l;
-  },[items,cat,q,showTagFilter,localFirst,userProfile?.preferredRegion]);
+  },[items,typeFilter,q,showTagFilter,localFirst,userProfile?.preferredRegion]);
 
+  const nanumiDoneCount=useMemo(()=>items.filter(i=>i.postType==="nanumi"&&i.status==="done").length,[items]);
   const filtJobs=useMemo(()=>{let l=fld==="전체"?jobs:jobs.filter(j=>j.field===fld);if(q)l=l.filter(j=>j.title?.includes(q)||j.org?.includes(q));return l;},[jobs,fld,q]);
   const filtR=useMemo(()=>REGIONS.filter(r=>r.includes(rSearch)),[rSearch]);
   const filtPrefR=useMemo(()=>REGIONS.filter(r=>r.includes(prefRSearch)),[prefRSearch]);
@@ -690,7 +695,10 @@ export default function App(){
       {screen==="home"&&(<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div style={{padding:"14px 16px 0",borderBottom:`0.5px solid ${DIVIDER}`,background:BG,flexShrink:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <div style={{fontSize:22,fontWeight:700,color:ACCENT,userSelect:"none",letterSpacing:-0.5}}>공쓰재</div>
+            <div style={{userSelect:"none"}}>
+              <div style={{fontSize:22,fontWeight:700,color:ACCENT,letterSpacing:-0.5}}>공쓰재</div>
+              <div style={{fontSize:11,color:"#aaa",marginTop:1}}>공연 쓰고 남은 거, 재활용</div>
+            </div>
             <div style={{display:"flex",gap:2,alignItems:"center"}}>
               <button onClick={()=>setShowSearch(s=>{if(s)setQ("");return !s;})} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:showSearch?ACCENT:"#888",padding:"4px 8px"}}><i className="ti ti-search"/></button>
               <button onClick={()=>go("notify","")} style={{position:"relative",background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#888",padding:"4px 8px"}}>
@@ -705,12 +713,19 @@ export default function App(){
             {q&&<button onClick={()=>setQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb",fontSize:16,padding:0}}><i className="ti ti-x"/></button>}
           </div>}
           {showTagFilter&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 12px",background:"#e8eaf6",borderRadius:10,marginBottom:10}}><span style={{fontSize:12,color:"#3949ab",fontWeight:500}}>🎭 {showTagFilter} 필터 중</span><button onClick={()=>setShowTagFilter("")} style={{background:"none",border:"none",cursor:"pointer",color:"#3949ab",fontSize:14}}>✕</button></div>}
-          <div style={{display:"flex"}}>{[["items","물건",TAB_ITEM],["jobs","일자리",TAB_JOB],["spaces","공간",TAB_SPACE]].map(([t,l,c])=>(<button key={t} onClick={()=>{setMainTab(t);setQ("");setShowSearch(false);setCat("전체");setFld("전체");}} style={{flex:1,padding:"8px 0",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:mainTab===t?600:400,color:mainTab===t?c:"#bbb",borderBottom:mainTab===t?`2px solid ${c}`:"2px solid transparent"}}>{l}</button>))}</div>
+          <div style={{display:"flex"}}>{[["items","물건",TAB_ITEM],["jobs","일자리",TAB_JOB],["spaces","공간",TAB_SPACE]].map(([t,l,c])=>(<button key={t} onClick={()=>{setMainTab(t);setQ("");setShowSearch(false);setCat("전체");setFld("전체");setTypeFilter("전체");}} style={{flex:1,padding:"8px 0",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:mainTab===t?600:400,color:mainTab===t?c:"#bbb",borderBottom:mainTab===t?`2px solid ${c}`:"2px solid transparent"}}>{l}</button>))}</div>
         </div>
         {mainTab!=="spaces"&&<div style={{padding:"8px 16px",borderBottom:`0.5px solid ${DIVIDER}`,overflowX:"auto",display:"flex",gap:6,flexShrink:0}}>
-          {mainTab==="items"?<>{ITEM_CATS.map(c=>chip(c,cat===c,()=>setCat(c)))}{userProfile?.preferredRegion&&chip(localFirst?"📍 내 지역 ON":"📍 내 지역 먼저",localFirst,()=>setLocalFirst(l=>!l))}</>:JOB_FIELDS.map(f=>chip(f,fld===f,()=>setFld(f)))}
+          {mainTab==="items"?<>
+            {[["전체","전체"],["🌿 나눔","나눔"],["구함","구함"],["판매","판매"]].map(([label,val])=>chip(label,typeFilter===val,()=>setTypeFilter(val)))}
+            {userProfile?.preferredRegion&&chip(localFirst?"📍 내 지역 ON":"📍 내 지역 먼저",localFirst,()=>setLocalFirst(l=>!l))}
+          </>:JOB_FIELDS.map(f=>chip(f,fld===f,()=>setFld(f)))}
         </div>}
         <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
+          {mainTab==="items"&&nanumiDoneCount>0&&<div style={{margin:"12px 16px 0",padding:"14px 16px",background:LIGHT,borderRadius:14,display:"flex",alignItems:"center",gap:12}}>
+            <span style={{fontSize:22,flexShrink:0}}>🌿</span>
+            <span style={{fontSize:13,color:ACCENT,fontWeight:500,lineHeight:1.5}}>지금까지 <strong>{nanumiDoneCount}개</strong>가 버려지지 않고<br/>다음 무대를 찾았어요</span>
+          </div>}
           {mainTab==="spaces"&&(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",padding:"40px 32px",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:20}}>🏛️</div>
             <div style={{fontSize:18,fontWeight:600,color:"#2a2a2a",marginBottom:10,lineHeight:1.4}}>공간 탭이 곧 열려요</div>
@@ -744,14 +759,14 @@ export default function App(){
                 {/* 제목 */}
                 <div style={{fontSize:16,fontWeight:500,color:"#1a1a1a",lineHeight:1.35,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.title}</div>
                 {/* 공연 출처 */}
-                {item.showTag&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500}}>{item.showTag}에서 나온</div>}
+                {item.showTag&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><i className="ti ti-theater" style={{fontSize:11}}/>{item.showTag}에서 나온</div>}
                 {/* 가격 (판매/구함만) */}
                 {isSale&&<div style={{fontSize:15,fontWeight:600,color:"#1a1a1a",marginBottom:5}}>{item.price?.toLocaleString()}원</div>}
                 {isGuhami&&<div style={{fontSize:13,color:"#B25E0A",marginBottom:5}}>{item.price>0?`예산 ${item.price?.toLocaleString()}원`:"가격 협의"}</div>}
                 {/* 메타 */}
                 <div style={{fontSize:12,color:"#bbb"}}>
                   <i className="ti ti-map-pin" style={{fontSize:11,marginRight:2}}/>
-                  {regionShort(item.region)}{item.category?.length>0&&<> · {item.category.join(", ")}</>}{item.createdAt&&<> · {fmtTime(item.createdAt)}</>}{isLocal&&<span style={{color:ACCENT}}> · 내 지역</span>}
+                  {regionShort(item.region)}{item.createdAt&&<> · {fmtTime(item.createdAt)}</>}{isLocal&&<span style={{color:ACCENT}}> · 내 지역</span>}
                 </div>
               </div>
             </div>);
