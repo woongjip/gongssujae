@@ -9,7 +9,9 @@ import {
   onAuthStateChanged, signOut
 } from "./firebase";
 
-const ACCENT="#2D6A4F",LIGHT="#f0f7f4",MID="#52b788",ADMIN_C="#1a237e";
+const ACCENT="#2D6A4F",LIGHT="#EEF4EE",MID="#52b788",ADMIN_C="#1a237e";
+const BG="#FAFAF8",DIVIDER="#EDEAE5";
+const TAB_ITEM="#2D6A4F",TAB_JOB="#C8902A",TAB_SPACE="#5B4A8A";
 const ITEM_CATS_ALL=["세트","소품","의상","장비","기타"];
 const ITEM_CATS=["전체",...ITEM_CATS_ALL];
 const JOB_FIELDS=["전체","조명","무대","음향","분장","영상","기타"];
@@ -20,8 +22,8 @@ function fmtMsgTime(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleT
 function fmtDateLabel(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});}
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||('ontouchstart' in window);
 const shellStyle=isMobile
-  ?{width:"100%",fontFamily:"sans-serif",background:"#fff",position:"relative",overflow:"hidden"}
-  :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:"1px solid #e5e5e5",borderRadius:24,overflow:"hidden",background:"#fff",height:700,position:"relative"};
+  ?{width:"100%",fontFamily:"sans-serif",background:BG,position:"relative",overflow:"hidden"}
+  :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:""};
 const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
@@ -581,7 +583,8 @@ export default function App(){
 
   // ── UI Helpers ──
   const inp={width:"100%",borderRadius:10,border:"0.5px solid #e0e0e0",padding:"10px 12px",fontSize:14,boxSizing:"border-box",outline:"none"};
-  const chip=(label,active,fn)=>(<button key={label} onClick={fn} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:active?ACCENT:"#e0e0e0",background:active?ACCENT:"#fff",color:active?"#fff":"#555",fontSize:12,cursor:"pointer",fontWeight:active?500:400}}>{label}</button>);
+  const tabColor=mainTab==="jobs"?TAB_JOB:mainTab==="spaces"?TAB_SPACE:TAB_ITEM;
+  const chip=(label,active,fn)=>(<button key={label} onClick={fn} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:active?tabColor:"#e0e0e0",background:active?tabColor:"#fff",color:active?"#fff":"#555",fontSize:12,cursor:"pointer",fontWeight:active?500:400}}>{label}</button>);
   const tb=(t)=>({flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",cursor:"pointer",fontSize:11,color:btab===t?ACCENT:"#aaa",fontWeight:btab===t?500:400,border:"none",background:"none"});
   const tic=(t)=>({fontSize:22,color:btab===t?ACCENT:"#bbb"});
   const mkBadge=(label,bg,color)=>(<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:bg,color,fontWeight:500}}>{label}</span>);
@@ -682,7 +685,7 @@ export default function App(){
 
       {/* 홈 */}
       {screen==="home"&&(<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-        <div style={{padding:"14px 16px 0",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
+        <div style={{padding:"14px 16px 0",borderBottom:`0.5px solid ${DIVIDER}`,background:BG,flexShrink:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:22,fontWeight:700,color:ACCENT,userSelect:"none",letterSpacing:-0.5}}>공쓰재</div>
             <div style={{display:"flex",gap:2,alignItems:"center"}}>
@@ -699,19 +702,25 @@ export default function App(){
             {q&&<button onClick={()=>setQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb",fontSize:16,padding:0}}><i className="ti ti-x"/></button>}
           </div>}
           {showTagFilter&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 12px",background:"#e8eaf6",borderRadius:10,marginBottom:10}}><span style={{fontSize:12,color:"#3949ab",fontWeight:500}}>🎭 {showTagFilter} 필터 중</span><button onClick={()=>setShowTagFilter("")} style={{background:"none",border:"none",cursor:"pointer",color:"#3949ab",fontSize:14}}>✕</button></div>}
-          <div style={{display:"flex"}}>{[["items","중고 물건"],["jobs","일자리"]].map(([t,l])=>(<button key={t} onClick={()=>{setMainTab(t);setQ("");setShowSearch(false);setCat("전체");setFld("전체");}} style={{flex:1,padding:"8px 0",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:mainTab===t?500:400,color:mainTab===t?ACCENT:"#aaa",borderBottom:mainTab===t?`2px solid ${ACCENT}`:"2px solid transparent"}}>{l}</button>))}</div>
+          <div style={{display:"flex"}}>{[["items","물건",TAB_ITEM],["jobs","일자리",TAB_JOB],["spaces","공간",TAB_SPACE]].map(([t,l,c])=>(<button key={t} onClick={()=>{setMainTab(t);setQ("");setShowSearch(false);setCat("전체");setFld("전체");}} style={{flex:1,padding:"8px 0",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:mainTab===t?600:400,color:mainTab===t?c:"#bbb",borderBottom:mainTab===t?`2px solid ${c}`:"2px solid transparent"}}>{l}</button>))}</div>
         </div>
-        <div style={{padding:"8px 16px",borderBottom:"0.5px solid #f5f5f5",overflowX:"auto",display:"flex",gap:6,flexShrink:0}}>
+        {mainTab!=="spaces"&&<div style={{padding:"8px 16px",borderBottom:`0.5px solid ${DIVIDER}`,overflowX:"auto",display:"flex",gap:6,flexShrink:0}}>
           {mainTab==="items"?<>{ITEM_CATS.map(c=>chip(c,cat===c,()=>setCat(c)))}{userProfile?.preferredRegion&&chip(localFirst?"📍 내 지역 ON":"📍 내 지역 먼저",localFirst,()=>setLocalFirst(l=>!l))}</>:JOB_FIELDS.map(f=>chip(f,fld===f,()=>setFld(f)))}
-        </div>
-        <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>
+        </div>}
+        <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
+          {mainTab==="spaces"&&(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",padding:"40px 32px",textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:20}}>🏛️</div>
+            <div style={{fontSize:18,fontWeight:600,color:"#2a2a2a",marginBottom:10,lineHeight:1.4}}>공간 탭이 곧 열려요</div>
+            <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>극장·연습실·전시장을 나누고 빌리는<br/>공간 기능이 준비 중이에요.<br/>공연에 쓸 공간이 필요하거나<br/>비는 시간을 나누고 싶다면 곧 만날 수 있어요.</div>
+            <div style={{marginTop:28,padding:"10px 20px",borderRadius:20,background:LIGHT,color:TAB_SPACE,fontSize:13,fontWeight:500}}>준비 중</div>
+          </div>)}
           {items.length===0&&mainTab==="items"&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 물건이 없어요<br/><span style={{fontSize:12}}>첫 번째 물건을 올려보세요!</span></div>}
           {mainTab==="items"&&filtItems.map(item=>{
             const isLiked=item.likedBy?.includes(currentUser?.uid);
             const isLocal=localFirst&&userProfile?.preferredRegion&&item.region?.startsWith(userProfile.preferredRegion.split(" ")[0]);
             const sStyle=STATUS_STYLE[item.status]||STATUS_STYLE.selling;
             const isFree=item.price===0&&item.postType!=="guhami";
-            return(<div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:14,padding:"16px",borderBottom:"0.5px solid #f0f0f0",cursor:"pointer",opacity:item.status==="done"?0.5:1,background:isLocal?"#fafffe":"#fff",alignItems:"flex-start"}}>
+            return(<div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:14,padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:item.status==="done"?0.5:1,background:isLocal?"#f4faf7":"#fff",alignItems:"flex-start"}}>
               {/* 130×130 사진 + 오버레이 */}
               <div style={{width:130,height:130,borderRadius:14,flexShrink:0,overflow:"hidden",background:LIGHT,position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 {item.photos?.length>0
@@ -741,7 +750,7 @@ export default function App(){
             </div>);
           })}
           {mainTab==="jobs"&&jobs.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 공고가 없어요</div>}
-          {mainTab==="jobs"&&filtJobs.map(job=>(<div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");}} style={{padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1}}><div style={{display:"flex",gap:10,alignItems:"flex-start"}}><div style={{width:44,height:44,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>{jbadge(job.type)}{jobBadges(job).map((b,i)=><span key={i}>{b}</span>)}<span style={{fontSize:11,color:"#bbb"}}>{job.field}</span></div><div style={{fontSize:14,fontWeight:500,marginBottom:2}}>{job.title}</div><div style={{fontSize:12,color:"#888"}}>{job.org} · {job.location}</div><div style={{display:"flex",justifyContent:"space-between",marginTop:5}}><span style={{fontSize:12,color:ACCENT,fontWeight:500}}>{job.pay}</span><span style={{fontSize:11,color:"#bbb"}}>{job.date}</span></div></div></div></div>))}
+          {mainTab==="jobs"&&filtJobs.map(job=>(<div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");}} style={{padding:"14px 16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1}}><div style={{display:"flex",gap:10,alignItems:"flex-start"}}><div style={{width:44,height:44,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>{jbadge(job.type)}{jobBadges(job).map((b,i)=><span key={i}>{b}</span>)}<span style={{fontSize:11,color:"#bbb"}}>{job.field}</span></div><div style={{fontSize:14,fontWeight:500,marginBottom:2}}>{job.title}</div><div style={{fontSize:12,color:"#888"}}>{job.org} · {job.location}</div><div style={{display:"flex",justifyContent:"space-between",marginTop:5}}><span style={{fontSize:12,color:ACCENT,fontWeight:500}}>{job.pay}</span><span style={{fontSize:11,color:"#bbb"}}>{job.date}</span></div></div></div></div>))}
         </div>
       </div>)}
 
