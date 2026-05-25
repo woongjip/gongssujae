@@ -164,6 +164,7 @@ export default function App(){
   const [mapPickerLoaded,setMapPickerLoaded]=useState(false);
   const [chatRecipientId,setChatRecipientId]=useState(null);
   const [showSearch,setShowSearch]=useState(false);
+  const [photoIdx,setPhotoIdx]=useState(0);
   const [cropQueue,setCropQueue]=useState([]);
   const [cropSrc,setCropSrc]=useState(null);
   const [cropPx,setCropPx]=useState({x:0,y:0,width:0,height:0});
@@ -492,6 +493,8 @@ export default function App(){
     }
   }
 
+  useEffect(()=>setPhotoIdx(0),[selItem?.id]);
+
   // 카카오맵 로드
   useEffect(()=>{
     if(screen!=="detail"||!selItem?.tradePlace)return;
@@ -716,17 +719,17 @@ export default function App(){
           </div>)}
           {items.length===0&&mainTab==="items"&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 물건이 없어요<br/><span style={{fontSize:12}}>첫 번째 물건을 올려보세요!</span></div>}
           {mainTab==="items"&&filtItems.map(item=>{
-            const isLiked=item.likedBy?.includes(currentUser?.uid);
             const isLocal=localFirst&&userProfile?.preferredRegion&&item.region?.startsWith(userProfile.preferredRegion.split(" ")[0]);
-            const sStyle=STATUS_STYLE[item.status]||STATUS_STYLE.selling;
-            const isFree=item.price===0&&item.postType!=="guhami";
+            const isNanumi=item.postType==="nanumi"&&item.price===0;
+            const isSale=item.postType==="nanumi"&&item.price>0;
+            const isGuhami=item.postType==="guhami";
             return(<div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:14,padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:item.status==="done"?0.5:1,background:isLocal?"#f4faf7":"#fff",alignItems:"flex-start"}}>
               {/* 130×130 사진 + 오버레이 */}
               <div style={{width:130,height:130,borderRadius:14,flexShrink:0,overflow:"hidden",background:LIGHT,position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 {item.photos?.length>0
                   ?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
                   :<span style={{fontSize:42}}>{(item.category?.[0]&&CAT_ICON[item.category[0]])||"📦"}</span>}
-                {item.status&&<div style={{position:"absolute",top:6,left:6,padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:600,background:sStyle.background,color:sStyle.color}}>{STATUS_LABEL[item.status]||"판매중"}</div>}
+                {(item.status==="reserved"||item.status==="done")&&<div style={{position:"absolute",top:6,left:6,padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:600,...(STATUS_STYLE[item.status]||{})}}>{STATUS_LABEL[item.status]}</div>}
                 {(item.likedBy?.length||0)>0&&<div style={{position:"absolute",bottom:6,right:6,background:"rgba(0,0,0,0.45)",borderRadius:10,padding:"2px 7px",display:"flex",alignItems:"center",gap:3}}>
                   <i className="ti ti-heart" style={{fontSize:10,color:"#fff"}}/>
                   <span style={{fontSize:10,color:"#fff",fontWeight:500}}>{item.likedBy.length}</span>
@@ -734,18 +737,22 @@ export default function App(){
               </div>
               {/* 텍스트 */}
               <div style={{flex:1,minWidth:0,paddingTop:2}}>
-                {item.showTag&&<div style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:"#e8eaf6",color:"#3949ab",fontWeight:500,display:"inline-block",marginBottom:5}}>🎭 {item.showTag}</div>}
-                <div style={{fontSize:16,fontWeight:500,color:"#1a1a1a",lineHeight:1.35,marginBottom:6,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.title}</div>
-                <div style={{fontSize:20,fontWeight:500,color:isFree?ACCENT:"#1a1a1a",marginBottom:6,lineHeight:1}}>
-                  {item.postType==="guhami"?(item.price===0?"가격 협의":`예산 ${item.price?.toLocaleString()}원`):(isFree?"무료 나눔":`${item.price?.toLocaleString()}원`)}
-                </div>
-                <div style={{fontSize:12,color:"#bbb",marginBottom:4}}>
+                {/* 유형 배지 */}
+                {isNanumi&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#E8F5EE",color:ACCENT,fontWeight:600,marginBottom:5}}>🌿 나눔</span>}
+                {isSale&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#F2F2F2",color:"#777",fontWeight:500,marginBottom:5}}>판매</span>}
+                {isGuhami&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#FEF3E8",color:"#B25E0A",fontWeight:600,marginBottom:5}}>구함</span>}
+                {/* 제목 */}
+                <div style={{fontSize:16,fontWeight:500,color:"#1a1a1a",lineHeight:1.35,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.title}</div>
+                {/* 공연 출처 */}
+                {item.showTag&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500}}>{item.showTag}에서 나온</div>}
+                {/* 가격 (판매/구함만) */}
+                {isSale&&<div style={{fontSize:15,fontWeight:600,color:"#1a1a1a",marginBottom:5}}>{item.price?.toLocaleString()}원</div>}
+                {isGuhami&&<div style={{fontSize:13,color:"#B25E0A",marginBottom:5}}>{item.price>0?`예산 ${item.price?.toLocaleString()}원`:"가격 협의"}</div>}
+                {/* 메타 */}
+                <div style={{fontSize:12,color:"#bbb"}}>
                   <i className="ti ti-map-pin" style={{fontSize:11,marginRight:2}}/>
                   {regionShort(item.region)}{item.category?.length>0&&<> · {item.category.join(", ")}</>}{item.createdAt&&<> · {fmtTime(item.createdAt)}</>}{isLocal&&<span style={{color:ACCENT}}> · 내 지역</span>}
                 </div>
-                {(item.chatCount||0)>0&&<div style={{fontSize:12,color:"#bbb",display:"flex",alignItems:"center",gap:3}}>
-                  <i className="ti ti-message-circle" style={{fontSize:12}}/>{item.chatCount}
-                </div>}
               </div>
             </div>);
           })}
@@ -755,35 +762,100 @@ export default function App(){
       </div>)}
 
       {/* 물건 상세 */}
-      {screen==="detail"&&selItem&&(()=>{const badges=itemBadges(selItem);const isLiked=selItem.likedBy?.includes(currentUser?.uid);const isOwner=selItem.sellerId===currentUser?.uid;return(
-        <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-          <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>물건 상세</span></div>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>{isOwner&&<button onClick={()=>boostItem(selItem.id)} style={{background:LIGHT,border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,color:ACCENT,cursor:"pointer",fontWeight:500}}>⬆ 끌어올리기</button>}{isOwner&&<button onClick={()=>startEdit(selItem)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}{isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteItem(selItem.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}</div>
+      {screen==="detail"&&selItem&&(()=>{
+        const isLiked=selItem.likedBy?.includes(currentUser?.uid);
+        const isOwner=selItem.sellerId===currentUser?.uid;
+        const isNanumi=selItem.postType==="nanumi"&&selItem.price===0;
+        const isSale=selItem.postType==="nanumi"&&selItem.price>0;
+        const isGuhami=selItem.postType==="guhami";
+        const photos=selItem.photos||[];
+        return(
+        <div style={{display:"flex",flexDirection:"column",height:"100%",background:BG}}>
+          {/* 헤더 */}
+          <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              {isOwner&&<button onClick={()=>boostItem(selItem.id)} style={{background:LIGHT,border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,color:ACCENT,cursor:"pointer",fontWeight:500}}>⬆ 끌어올리기</button>}
+              {isOwner&&<button onClick={()=>startEdit(selItem)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
+              {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteItem(selItem.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
+            </div>
           </div>
           <div style={{flex:1,minHeight:0,overflowY:"auto"}}>
-            <div style={{height:270,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center"}}>{selItem.photos?.length>0?<div style={{display:"flex",height:"100%",width:"100%",overflowX:"auto"}}>{selItem.photos.map((ph,i)=><img key={i} src={ph} style={{width:"100%",height:"100%",objectFit:"contain",flexShrink:0}} alt=""/>)}</div>:<span style={{fontSize:72}}>{selItem.emoji||"📦"}</span>}</div>
-            <div style={{padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                <div style={{flex:1}}><div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:5,alignItems:"center"}}>{badges.map((b,i)=><span key={i}>{b}</span>)}{showTagPill(selItem.showTag,true)}</div><div style={{fontSize:18,fontWeight:500}}>{selItem.title}</div><div style={{fontSize:11,color:"#bbb",marginTop:3}}><i className="ti ti-map-pin" style={{fontSize:10,marginRight:2}}/>{selItem.region} · {selItem.category?.join(", ")}{selItem.createdAt&&<> · {fmtTime(selItem.createdAt)}</>}</div><div style={{display:"flex",gap:10,marginTop:5}}>{(selItem.likedBy?.length||0)>0&&<span style={{fontSize:12,color:"#aaa",display:"flex",alignItems:"center",gap:3}}><i className="ti ti-heart" style={{fontSize:12,color:"#e25"}}/>{selItem.likedBy.length}명 찜</span>}{(selItem.chatCount||0)>0&&<span style={{fontSize:12,color:"#aaa",display:"flex",alignItems:"center",gap:3}}><i className="ti ti-message-circle" style={{fontSize:12,color:ACCENT}}/>{selItem.chatCount}명 채팅</span>}</div></div>
-                <span style={{fontSize:16,fontWeight:500,color:selItem.price===0&&selItem.postType!=="guhami"?ACCENT:"#1a1a1a",marginLeft:8,whiteSpace:"nowrap"}}>{selItem.postType==="guhami"?(selItem.price===0?"가격 협의":`예산 ${selItem.price?.toLocaleString()}원`):(selItem.price===0?"무료 나눔":`${selItem.price?.toLocaleString()}원`)}</span>
+            {/* 메인 사진 */}
+            <div style={{height:260,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+              {photos.length>0
+                ?<img src={photos[photoIdx]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                :<span style={{fontSize:72}}>{(selItem.category?.[0]&&CAT_ICON[selItem.category[0]])||"📦"}</span>}
+            </div>
+            {/* 썸네일 줄 */}
+            {photos.length>1&&<div style={{display:"flex",gap:8,padding:"10px 16px",background:"#fff",overflowX:"auto"}}>
+              {photos.map((ph,i)=>(
+                <div key={i} onClick={()=>setPhotoIdx(i)} style={{width:52,height:52,borderRadius:10,overflow:"hidden",flexShrink:0,border:`2px solid ${i===photoIdx?ACCENT:"transparent"}`,cursor:"pointer",boxSizing:"border-box"}}>
+                  <img src={ph} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                </div>
+              ))}
+            </div>}
+            <div style={{padding:16,background:"#fff",marginBottom:8}}>
+              {/* 유형 배지 + 가격 */}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                {isNanumi&&<span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#E8F5EE",color:ACCENT,fontWeight:600}}>🌿 나눔</span>}
+                {isSale&&<><span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#F2F2F2",color:"#777",fontWeight:500}}>판매</span><span style={{fontSize:20,fontWeight:700,color:"#1a1a1a"}}>{selItem.price?.toLocaleString()}원</span></>}
+                {isGuhami&&<><span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#FEF3E8",color:"#B25E0A",fontWeight:600}}>구함</span><span style={{fontSize:16,color:"#B25E0A",fontWeight:600}}>{selItem.price>0?`예산 ${selItem.price?.toLocaleString()}원`:"가격 협의"}</span></>}
               </div>
-              {isOwner&&<div style={{display:"flex",gap:6,marginBottom:14}}>{[["selling","판매중","#e8f5e9","#2e7d32"],["reserved","예약중","#fff3e0","#e65100"],["done","거래완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?color:"#e0e0e0"}`,background:selItem.status===k?bg:"#fff",color:selItem.status===k?color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{l}</button>))}</div>}
-              <div style={{padding:14,background:"#fafafa",borderRadius:12,marginBottom:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selItem.desc}</p></div>
-              <div style={{padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12,marginBottom:12}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>연락처</div><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-phone" style={{fontSize:15,color:ACCENT}}/>{selItem.contact}{selItem.safeNum&&<span style={{fontSize:10,background:LIGHT,color:ACCENT,padding:"2px 8px",borderRadius:10,fontWeight:500}}>안심번호</span>}</div></div>
-              {selItem.tradePlace&&<div style={{border:"0.5px solid #f0f0f0",borderRadius:12,overflow:"hidden",marginBottom:12}}>
-                <div style={{padding:"12px 14px 8px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>거래 희망 장소</div><div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div></div>
-                <div id="kakaoMapDetail" style={{height:180,background:LIGHT}}/>
+              {/* 제목 */}
+              <div style={{fontSize:21,fontWeight:600,lineHeight:1.4,marginBottom:10,color:"#1a1a1a"}}>{selItem.title}</div>
+              {/* 공연 출처 박스 */}
+              {selItem.showTag&&<div style={{background:"#EEF4EE",borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:16}}>🎭</span>
+                <span style={{fontSize:13,color:ACCENT,fontWeight:500}}>{selItem.showTag}에서 쓰던 거예요</span>
               </div>}
-              <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"0.5px solid #f0f0f0",borderRadius:12}}>
-                <div style={{width:40,height:40,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:500,fontSize:14}}>{selItem.si}</div>
-                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{selItem.seller}</div><div style={{fontSize:11,color:"#aaa"}}>판매자</div></div>
+              {/* 오너 상태 변경 */}
+              {isOwner&&<div style={{display:"flex",gap:6,marginBottom:14}}>{[["selling","판매중","#e8f5e9","#2e7d32"],["reserved","예약중","#fff3e0","#e65100"],["done","거래완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeStatus(selItem.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selItem.status===k?color:"#e0e0e0"}`,background:selItem.status===k?bg:"#fff",color:selItem.status===k?color:"#aaa",fontSize:11,cursor:"pointer",fontWeight:selItem.status===k?500:400}}>{l}</button>))}</div>}
+              {/* 설명 */}
+              {selItem.desc&&<div style={{padding:14,background:BG,borderRadius:12,marginBottom:12}}><p style={{margin:0,fontSize:14,lineHeight:1.8,color:"#333"}}>{selItem.desc}</p></div>}
+              {/* 메타 */}
+              <div style={{display:"flex",gap:12,fontSize:12,color:"#aaa",flexWrap:"wrap",marginBottom:14}}>
+                {selItem.region&&<span><i className="ti ti-map-pin" style={{fontSize:11,marginRight:2}}/>{regionShort(selItem.region)}</span>}
+                {selItem.createdAt&&<span><i className="ti ti-clock" style={{fontSize:11,marginRight:2}}/>{fmtTime(selItem.createdAt)}</span>}
+                {(selItem.likedBy?.length||0)>0&&<span><i className="ti ti-heart" style={{fontSize:11,marginRight:2}}/>{selItem.likedBy.length}명 찜</span>}
+                {(selItem.chatCount||0)>0&&<span><i className="ti ti-message-circle" style={{fontSize:11,marginRight:2}}/>{selItem.chatCount}명 채팅</span>}
+                {(selItem.viewCount||0)>0&&<span><i className="ti ti-eye" style={{fontSize:11,marginRight:2}}/>{selItem.viewCount} 조회</span>}
+              </div>
+            </div>
+            {/* 연락처 */}
+            {selItem.contact&&<div style={{background:"#fff",padding:"14px 16px",marginBottom:8,borderRadius:0}}>
+              <div style={{fontSize:11,color:"#aaa",marginBottom:6}}>연락처</div>
+              <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:8}}><i className="ti ti-phone" style={{fontSize:15,color:ACCENT}}/>{selItem.contact}{selItem.safeNum&&<span style={{fontSize:10,background:LIGHT,color:ACCENT,padding:"2px 8px",borderRadius:10,fontWeight:500}}>안심번호</span>}</div>
+            </div>}
+            {/* 거래 장소 + 지도 */}
+            {selItem.tradePlace&&<div style={{background:"#fff",marginBottom:8}}>
+              <div style={{padding:"14px 16px 8px"}}>
+                <div style={{fontSize:11,color:"#aaa",marginBottom:6}}>받으러 올 곳</div>
+                <div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div>
+              </div>
+              <div id="kakaoMapDetail" style={{height:180,background:LIGHT}}/>
+            </div>}
+            {/* 판매자 카드 */}
+            <div style={{background:"#fff",padding:"14px 16px",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:42,height:42,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:15,flexShrink:0}}>{selItem.si}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,marginBottom:2}}>{selItem.seller}</div>
+                  <div style={{fontSize:12,color:"#aaa",display:"flex",gap:8,alignItems:"center"}}>
+                    <span>공연온도 {(selItem.sellerTemp||36.5).toFixed(1)}°</span>
+                    {(selItem.donateCount||0)>0&&<span>· 나눔 {selItem.donateCount}회</span>}
+                  </div>
+                </div>
+                <i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/>
               </div>
             </div>
           </div>
-          <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))",borderTop:"0.5px solid #f0f0f0",flexShrink:0,display:"flex",gap:8}}>
-            <button onClick={()=>toggleLike(selItem.id)} style={{width:48,height:54,borderRadius:12,border:`1px solid ${isLiked?"#e25":"#e0e0e0"}`,background:isLiked?"#fff0f2":"#fff",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-heart" style={{color:isLiked?"#e25":"#bbb"}}/></button>
-            {!isOwner&&<button onClick={()=>openChat(selItem.id,selItem.title,selItem.sellerId)} style={{flex:1,height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><i className="ti ti-message-circle" style={{fontSize:22}}/>판매자와 채팅하기</button>}
+          {/* 하단 버튼 */}
+          <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(20px + env(safe-area-inset-bottom, 0px))",borderTop:`0.5px solid ${DIVIDER}`,flexShrink:0,display:"flex",gap:8,background:"#fff"}}>
+            <button onClick={()=>toggleLike(selItem.id)} style={{width:50,height:54,borderRadius:14,border:`1px solid ${isLiked?"#e25":"#e8e8e8"}`,background:isLiked?"#fff0f2":"#fff",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-heart" style={{color:isLiked?"#e25":"#bbb"}}/></button>
+            {!isOwner&&<button onClick={()=>openChat(selItem.id,selItem.title,selItem.sellerId)} style={{flex:1,height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {isNanumi?<>🤝 이어받기</>:<><i className="ti ti-message-circle" style={{fontSize:20}}/>채팅하기</>}
+            </button>}
             {isOwner&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#aaa"}}>내 게시글입니다</div>}
           </div>
         </div>
