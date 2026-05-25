@@ -814,7 +814,7 @@ export default function App(){
         const isGuhami=selItem.postType==="guhami";
         const photos=selItem.photos||[];
         return(
-        <div style={{display:"flex",flexDirection:"column",height:"100%",background:BG}}>
+        <div style={{display:"flex",flexDirection:"column",height:"100%",background:BG,paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",boxSizing:"border-box"}}>
           {/* 헤더 */}
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
