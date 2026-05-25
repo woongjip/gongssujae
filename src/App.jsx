@@ -907,7 +907,7 @@ export default function App(){
 
       {/* 공고 상세 */}
       {screen==="jobdetail"&&selJob&&(()=>{const fs=jfs(selJob.field);const isOwner=selJob.sellerId===currentUser?.uid;const isGujik=selJob.jobType==="gujik";return(
-        <div style={{display:"flex",flexDirection:"column",height:"100%",background:BG}}>
+        <div style={{display:"flex",flexDirection:"column",height:"100%",background:BG,paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",boxSizing:"border-box"}}>
           {/* 상단 내비 */}
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -919,7 +919,7 @@ export default function App(){
               {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteJob(selJob.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
             </div>
           </div>
-          <div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))"}}>
+          <div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:16}}>
             {/* 직군 헤더 배너 */}
             <div style={{height:132,background:fs.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
               <div style={{width:52,height:52,borderRadius:16,background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center"}}>
