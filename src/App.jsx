@@ -718,7 +718,6 @@ export default function App(){
         {mainTab!=="spaces"&&<div style={{padding:"8px 16px",borderBottom:`0.5px solid ${DIVIDER}`,overflowX:"auto",display:"flex",gap:6,flexShrink:0}}>
           {mainTab==="items"?<>
             {[["전체","전체"],["🌿 나눔","나눔"],["구함","구함"],["판매","판매"]].map(([label,val])=>chip(label,typeFilter===val,()=>setTypeFilter(val)))}
-            {userProfile?.preferredRegion&&chip(localFirst?"📍 내 지역 ON":"📍 내 지역 먼저",localFirst,()=>setLocalFirst(l=>!l))}
           </>:JOB_FIELDS.map(f=>chip(f,fld===f,()=>setFld(f)))}
         </div>}
         <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
@@ -759,7 +758,7 @@ export default function App(){
                 {/* 제목 */}
                 <div style={{fontSize:16,fontWeight:500,color:"#1a1a1a",lineHeight:1.35,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.title}</div>
                 {/* 공연 출처 */}
-                {item.showTag&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><i className="ti ti-theater" style={{fontSize:11}}/>{item.showTag}에서 나온</div>}
+                {item.showTag&&item.showTag!=="공연없음"&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><i className="ti ti-theater" style={{fontSize:11}}/>{item.showTag}에서 나온</div>}
                 {/* 가격 (판매/구함만) */}
                 {isSale&&<div style={{fontSize:15,fontWeight:600,color:"#1a1a1a",marginBottom:5}}>{item.price?.toLocaleString()}원</div>}
                 {isGuhami&&<div style={{fontSize:13,color:"#B25E0A",marginBottom:5}}>{item.price>0?`예산 ${item.price?.toLocaleString()}원`:"가격 협의"}</div>}
