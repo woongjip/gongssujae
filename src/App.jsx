@@ -9,9 +9,9 @@ import {
   onAuthStateChanged, signOut
 } from "./firebase";
 
-const ACCENT="#2D6A4F",LIGHT="#EEF4EE",MID="#52b788",ADMIN_C="#1a237e";
+const ACCENT="#228BB5",LIGHT="#E3F3F9",MID="#3DA1B2",ADMIN_C="#1a237e";
 const BG="#FAFAF8",DIVIDER="#EDEAE5";
-const TAB_ITEM="#2D6A4F",TAB_JOB="#C8902A",TAB_SPACE="#5B4A8A";
+const TAB_ITEM="#228BB5",TAB_JOB="#C8902A",TAB_SPACE="#5B4A8A";
 const ITEM_CATS_ALL=["세트","소품","의상","장비","기타"];
 const ITEM_CATS=["전체",...ITEM_CATS_ALL];
 const JOB_FIELDS=["전체","조명","무대","음향","분장","영상","기타"];
@@ -752,7 +752,7 @@ export default function App(){
               {/* 텍스트 */}
               <div style={{flex:1,minWidth:0,paddingTop:2}}>
                 {/* 유형 배지 */}
-                {isNanumi&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#E8F5EE",color:ACCENT,fontWeight:600,marginBottom:5}}>🌿 나눔</span>}
+                {isNanumi&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#E3F3F9",color:ACCENT,fontWeight:600,marginBottom:5}}>🌿 나눔</span>}
                 {isSale&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#F2F2F2",color:"#777",fontWeight:500,marginBottom:5}}>판매</span>}
                 {isGuhami&&<span style={{display:"inline-block",fontSize:11,padding:"2px 8px",borderRadius:10,background:"#FEF3E8",color:"#B25E0A",fontWeight:600,marginBottom:5}}>구함</span>}
                 {/* 제목 */}
@@ -812,14 +812,14 @@ export default function App(){
             <div style={{padding:16,background:"#fff",marginBottom:8}}>
               {/* 유형 배지 + 가격 */}
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                {isNanumi&&<span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#E8F5EE",color:ACCENT,fontWeight:600}}>🌿 나눔</span>}
+                {isNanumi&&<span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#E3F3F9",color:ACCENT,fontWeight:600}}>🌿 나눔</span>}
                 {isSale&&<><span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#F2F2F2",color:"#777",fontWeight:500}}>판매</span><span style={{fontSize:20,fontWeight:700,color:"#1a1a1a"}}>{selItem.price?.toLocaleString()}원</span></>}
                 {isGuhami&&<><span style={{fontSize:12,padding:"3px 10px",borderRadius:10,background:"#FEF3E8",color:"#B25E0A",fontWeight:600}}>구함</span><span style={{fontSize:16,color:"#B25E0A",fontWeight:600}}>{selItem.price>0?`예산 ${selItem.price?.toLocaleString()}원`:"가격 협의"}</span></>}
               </div>
               {/* 제목 */}
               <div style={{fontSize:21,fontWeight:600,lineHeight:1.4,marginBottom:10,color:"#1a1a1a"}}>{selItem.title}</div>
               {/* 공연 출처 박스 */}
-              {selItem.showTag&&<div style={{background:"#EEF4EE",borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+              {selItem.showTag&&<div style={{background:"#E3F3F9",borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:16}}>🎭</span>
                 <span style={{fontSize:13,color:ACCENT,fontWeight:500}}>{selItem.showTag}에서 쓰던 거예요</span>
               </div>}
