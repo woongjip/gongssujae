@@ -17,6 +17,15 @@ const TAB_ITEM="#228BB5",TAB_JOB="#C8902A",TAB_SPACE="#5B4A8A";
 const ITEM_CATS_ALL=["세트","소품","의상","장비","기타"];
 const ITEM_CATS=["전체",...ITEM_CATS_ALL];
 const JOB_FIELDS=["전체","조명","무대","음향","분장","영상","기타"];
+const JOB_FIELD_STYLE={
+  "조명":{bg:"#F5A623",text:"#7A4F00",light:"#FEF3DC",icon:"ti-bulb"},
+  "무대":{bg:"#7C5CBF",text:"#3B1F7A",light:"#EDE8F7",icon:"ti-layout-board"},
+  "음향":{bg:"#2A9D8F",text:"#0D5049",light:"#D9F2EF",icon:"ti-volume"},
+  "분장":{bg:"#E8657A",text:"#8B1C2E",light:"#FDEAED",icon:"ti-brush"},
+  "영상":{bg:"#3D5A99",text:"#1A2D5A",light:"#E0E6F5",icon:"ti-video"},
+  "기타":{bg:"#8C8C8C",text:"#3A3A3A",light:"#EFEFEF",icon:"ti-dots"},
+};
+const jfs=(f)=>JOB_FIELD_STYLE[f]||JOB_FIELD_STYLE["기타"];
 const INTERESTS=["조명","무대","음향","분장","의상","소품","연출","기획","배우","스태프"];
 const REGIONS=["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 마포구","서울 강남구","서울 서초구","서울 송파구","서울 강동구","서울 관악구","서울 동작구","서울 영등포구","서울 강서구","서울 은평구","서울 서대문구","서울 성북구","서울 노원구","서울 도봉구","서울 강북구","서울 양천구","서울 구로구","서울 금천구","서울 중랑구","서울 광진구","서울 동대문구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","대구 중구","대구 동구","대구 서구","인천 중구","인천 동구","인천 미추홀구","인천 연수구","광주 동구","광주 서구","광주 남구","광주 북구","대전 동구","대전 중구","대전 서구","대전 유성구","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안양시","경기 남양주시"];
 function fmtTime(ts){const d=ts?.toDate?.();if(!d)return"";const now=new Date();const diff=now-d;const m=Math.floor(diff/60000);if(m<1)return"방금 전";if(m<60)return`${m}분 전`;const h=Math.floor(m/60);if(h<24&&d.toDateString()===now.toDateString())return`${h}시간 전`;const yest=new Date(now);yest.setDate(yest.getDate()-1);if(d.toDateString()===yest.toDateString())return"어제";return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`;}
@@ -775,7 +784,24 @@ export default function App(){
             </div>);
           })}
           {mainTab==="jobs"&&jobs.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 공고가 없어요</div>}
-          {mainTab==="jobs"&&filtJobs.map(job=>(<div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");}} style={{padding:"14px 16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1}}><div style={{display:"flex",gap:10,alignItems:"flex-start"}}><div style={{width:44,height:44,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>{jbadge(job.type)}{jobBadges(job).map((b,i)=><span key={i}>{b}</span>)}<span style={{fontSize:11,color:"#bbb"}}>{job.field}</span></div><div style={{fontSize:14,fontWeight:500,marginBottom:2}}>{job.title}</div><div style={{fontSize:12,color:"#888"}}>{job.org} · {job.location}</div><div style={{display:"flex",justifyContent:"space-between",marginTop:5}}><span style={{fontSize:12,color:ACCENT,fontWeight:500}}>{job.pay}</span><span style={{fontSize:11,color:"#bbb"}}>{job.date}</span></div></div></div></div>))}
+          {mainTab==="jobs"&&filtJobs.map(job=>{const fs=jfs(job.field);const isGujik=job.jobType==="gujik";return(<div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");}} style={{padding:"14px 16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1,background:BG}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{width:96,height:96,borderRadius:16,background:fs.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,flexShrink:0}}>
+                <i className={`ti ${fs.icon}`} style={{fontSize:26,color:"#fff"}}/>
+                <span style={{fontSize:11,color:"#fff",fontWeight:600,letterSpacing:0.3}}>{job.field}</span>
+              </div>
+              <div style={{flex:1,minWidth:0,paddingTop:2}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:isGujik?"#D9F2EF":"#FFF0E0",color:isGujik?"#0D5049":"#C05000",fontWeight:600}}>{isGujik?"구직":"구인"}</span>
+                  {job.jobStatus==="done"&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:"#f0f0f0",color:"#999",fontWeight:500}}>완료</span>}
+                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:job.type==="장기"?"#E0E6F5":"#FFF3E0",color:job.type==="장기"?"#1A2D5A":"#C05000",fontWeight:500}}>{job.type}</span>
+                </div>
+                <div style={{fontSize:15,fontWeight:600,color:"#1a1a1a",marginBottom:4,lineHeight:1.3}}>{job.title}</div>
+                <div style={{fontSize:15,fontWeight:500,color:fs.bg,marginBottom:6}}>{job.pay||"협의"}</div>
+                <div style={{fontSize:12,color:"#999"}}>{[job.org,job.location,job.date].filter(Boolean).join(" · ")}</div>
+              </div>
+            </div>
+          </div>);})}
         </div>
       </div>)}
 
@@ -880,17 +906,62 @@ export default function App(){
       );})()}
 
       {/* 공고 상세 */}
-      {screen==="jobdetail"&&selJob&&(()=>{const badges=jobBadges(selJob);const isOwner=selJob.sellerId===currentUser?.uid;return(
-        <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-          <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>공고 상세</span></div>{isOwner&&<button onClick={()=>startEditJob(selJob)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}{isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteJob(selJob.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}</div>
-          <div style={{flex:1,minHeight:0,overflowY:"auto",padding:16}}>
-            <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:16}}><div style={{width:52,height:52,borderRadius:14,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{selJob.icon}</div><div><div style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>{jbadge(selJob.type)}{badges.map((b,i)=><span key={i}>{b}</span>)}</div><div style={{fontSize:17,fontWeight:500}}>{selJob.title}</div></div></div>
-            {isOwner&&<div style={{display:"flex",gap:8,marginBottom:14}}>{[["active","진행중","#e8f5e9","#2e7d32"],["done","완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeJobStatus(selJob.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selJob.jobStatus===k?color:"#e0e0e0"}`,background:selJob.jobStatus===k?bg:"#fff",color:selJob.jobStatus===k?color:"#aaa",fontSize:12,cursor:"pointer",fontWeight:selJob.jobStatus===k?500:400}}>{l}</button>))}</div>}
-            {[["단체",selJob.org],["지역",selJob.location],["기간",selJob.date],["보수",selJob.pay],["등록",fmtTime(selJob.createdAt)]].filter(([,v])=>v).map(([k,v])=>(<div key={k} style={{display:"flex",padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><span style={{fontSize:13,color:"#aaa",width:48}}>{k}</span><span style={{fontSize:13,fontWeight:k==="보수"?500:400,color:k==="보수"?ACCENT:"#1a1a1a"}}>{v}</span></div>))}
-            <div style={{marginTop:16,padding:14,background:"#fafafa",borderRadius:12}}><p style={{margin:0,fontSize:14,lineHeight:1.7,color:"#333"}}>{selJob.desc}</p></div>
+      {screen==="jobdetail"&&selJob&&(()=>{const fs=jfs(selJob.field);const isOwner=selJob.sellerId===currentUser?.uid;const isGujik=selJob.jobType==="gujik";return(
+        <div style={{display:"flex",flexDirection:"column",height:"100%",background:BG}}>
+          {/* 상단 내비 */}
+          <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
+              <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              {isOwner&&<button onClick={()=>startEditJob(selJob)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
+              {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteJob(selJob.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
+            </div>
           </div>
-          <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))",borderTop:"0.5px solid #f0f0f0",flexShrink:0}}>
-            {!isOwner?<button onClick={()=>openChat(selJob.id,selJob.title,selJob.sellerId)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><i className="ti ti-message-circle" style={{fontSize:22}}/>지원 / 문의 채팅</button>:<div style={{textAlign:"center",fontSize:13,color:"#aaa",paddingTop:8}}>내 공고입니다</div>}
+          <div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))"}}>
+            {/* 직군 헤더 배너 */}
+            <div style={{height:132,background:fs.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
+              <div style={{width:52,height:52,borderRadius:16,background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <i className={`ti ${fs.icon}`} style={{fontSize:28,color:"#fff"}}/>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:15,fontWeight:700,color:"#fff"}}>{selJob.field}</span>
+                <span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:"rgba(255,255,255,0.25)",color:"#fff",fontWeight:600}}>{isGujik?"구직":"구인"}</span>
+                <span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:"rgba(255,255,255,0.2)",color:"#fff",fontWeight:500}}>{selJob.type}</span>
+              </div>
+            </div>
+            <div style={{padding:"16px 16px 0"}}>
+              {/* 제목 */}
+              <div style={{fontSize:20,fontWeight:700,color:"#1a1a1a",marginBottom:16,lineHeight:1.3}}>{selJob.title}</div>
+              {/* 3칸 요약 박스 */}
+              <div style={{display:"flex",borderRadius:14,overflow:"hidden",border:`1px solid ${DIVIDER}`,marginBottom:16,background:"#fff"}}>
+                {[["보수",selJob.pay||"협의"],["기간",selJob.date||"-"],["지역",selJob.location||"-"]].map(([k,v],i)=>(
+                  <div key={k} style={{flex:1,padding:"12px 8px",textAlign:"center",borderRight:i<2?`1px solid ${DIVIDER}`:"none"}}>
+                    <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:i===0?fs.bg:"#1a1a1a",lineHeight:1.3}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {/* 단체 */}
+              {selJob.org&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 14px",background:"#fff",borderRadius:12,marginBottom:12}}>
+                <i className="ti ti-building" style={{fontSize:16,color:"#aaa"}}/>
+                <span style={{fontSize:14,color:"#333"}}>{selJob.org}</span>
+              </div>}
+              {/* 상태 변경 (오너) */}
+              {isOwner&&<div style={{display:"flex",gap:8,marginBottom:12}}>{[["active","진행중","#e8f5e9","#2e7d32"],["done","완료","#f5f5f5","#9e9e9e"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>changeJobStatus(selJob.id,k)} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${selJob.jobStatus===k?color:"#e0e0e0"}`,background:selJob.jobStatus===k?bg:"#fff",color:selJob.jobStatus===k?color:"#aaa",fontSize:12,cursor:"pointer",fontWeight:selJob.jobStatus===k?500:400}}>{l}</button>))}</div>}
+              {/* 설명 */}
+              {selJob.desc&&<div style={{padding:"14px 16px",background:"#fff",borderRadius:14,marginBottom:12}}>
+                <p style={{margin:0,fontSize:14,lineHeight:1.8,color:"#333"}}>{selJob.desc}</p>
+              </div>}
+              <div style={{fontSize:11,color:"#ccc",textAlign:"right",marginBottom:16}}>{fmtTime(selJob.createdAt)}</div>
+            </div>
+          </div>
+          {/* 하단 버튼 */}
+          <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(20px + env(safe-area-inset-bottom, 0px))",borderTop:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
+            {!isOwner
+              ?<button onClick={()=>openChat(selJob.id,selJob.title,selJob.sellerId)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:fs.bg,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><i className="ti ti-message-circle" style={{fontSize:22}}/>지원 · 문의하기</button>
+              :<div style={{textAlign:"center",fontSize:13,color:"#aaa",paddingTop:8}}>내 공고입니다</div>}
           </div>
         </div>
       );})()}
