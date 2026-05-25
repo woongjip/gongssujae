@@ -607,6 +607,7 @@ export default function App(){
   const tic=(t)=>({fontSize:22,color:btab===t?ACCENT:"#bbb"});
   const mkBadge=(label,bg,color)=>(<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:bg,color,fontWeight:500}}>{label}</span>);
   const [shareToast,setShareToast]=useState(false);
+  const [moreMenu,setMoreMenu]=useState(null); // "item"|"job"|null
   const sharePost=(title,text)=>{const url="https://gongssujae.vercel.app";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
   const CAT_ICON={"세트":"🎪","소품":"🪑","의상":"👘","장비":"🔦","기타":"📦"};
   const STATUS_LABEL={"selling":"판매중","reserved":"예약중","done":"거래완료"};
@@ -700,7 +701,7 @@ export default function App(){
 
   // ── Main App ──
   return(
-    <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column"}}>
+    <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column"}} onClick={()=>moreMenu&&setMoreMenu(null)}>
 
       {/* 홈 */}
       {screen==="home"&&(<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
@@ -819,11 +820,14 @@ export default function App(){
           {/* 헤더 */}
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              {isOwner&&<button onClick={()=>boostItem(selItem.id)} style={{background:LIGHT,border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,color:ACCENT,cursor:"pointer",fontWeight:500}}>⬆ 끌어올리기</button>}
-              {isOwner&&<button onClick={()=>startEdit(selItem)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
-              {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteItem(selItem.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
-              <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px"}}><i className="ti ti-share"/></button>
+            <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
+              <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
+              {isOwner&&<button onClick={()=>setMoreMenu(m=>m==="item"?null:"item")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
+              {isOwner&&moreMenu==="item"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
+                <button onClick={()=>{boostItem(selItem.id);setMoreMenu(null);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#333",textAlign:"left"}}><i className="ti ti-arrow-up" style={{color:ACCENT}}/>끌어올리기</button>
+                <button onClick={()=>{startEdit(selItem);setMoreMenu(null);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#333",textAlign:"left",borderTop:`0.5px solid ${DIVIDER}`}}><i className="ti ti-pencil" style={{color:ACCENT}}/>수정</button>
+                <button onClick={()=>{setMoreMenu(null);if(window.confirm("정말 삭제하시겠어요?"))deleteItem(selItem.id).then(goHome);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#e53935",textAlign:"left",borderTop:`0.5px solid ${DIVIDER}`}}><i className="ti ti-trash"/>삭제</button>
+              </div>}
             </div>
           </div>
           <div style={{flex:1,minHeight:0,overflowY:"auto"}}>
@@ -916,10 +920,13 @@ export default function App(){
               <button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
               <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
             </div>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              {isOwner&&<button onClick={()=>startEditJob(selJob)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
-              {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteJob(selJob.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
-              <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px"}}><i className="ti ti-share"/></button>
+            <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
+              <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
+              {isOwner&&<button onClick={()=>setMoreMenu(m=>m==="job"?null:"job")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
+              {isOwner&&moreMenu==="job"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
+                <button onClick={()=>{startEditJob(selJob);setMoreMenu(null);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#333",textAlign:"left"}}><i className="ti ti-pencil" style={{color:ACCENT}}/>수정</button>
+                <button onClick={()=>{setMoreMenu(null);if(window.confirm("정말 삭제하시겠어요?"))deleteJob(selJob.id).then(goHome);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#e53935",textAlign:"left",borderTop:`0.5px solid ${DIVIDER}`}}><i className="ti ti-trash"/>삭제</button>
+              </div>}
             </div>
           </div>
           <div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:16}}>
