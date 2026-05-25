@@ -758,7 +758,7 @@ export default function App(){
                 {/* 제목 */}
                 <div style={{fontSize:16,fontWeight:500,color:"#1a1a1a",lineHeight:1.35,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.title}</div>
                 {/* 공연 출처 */}
-                {item.showTag&&item.showTag!=="공연없음"&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><i className="ti ti-theater" style={{fontSize:11}}/>{item.showTag}에서 나온</div>}
+                {item.showTag&&item.showTag!=="공연없음"&&item.showTag!=="없음"&&<div style={{fontSize:12,color:ACCENT,marginBottom:5,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><i className="ti ti-theater" style={{fontSize:11}}/>{item.showTag}에서 나온</div>}
                 {/* 가격 (판매/구함만) */}
                 {isSale&&<div style={{fontSize:15,fontWeight:600,color:"#1a1a1a",marginBottom:5}}>{item.price?.toLocaleString()}원</div>}
                 {isGuhami&&<div style={{fontSize:13,color:"#B25E0A",marginBottom:5}}>{item.price>0?`예산 ${item.price?.toLocaleString()}원`:"가격 협의"}</div>}
@@ -819,7 +819,7 @@ export default function App(){
               {/* 제목 */}
               <div style={{fontSize:21,fontWeight:600,lineHeight:1.4,marginBottom:10,color:"#1a1a1a"}}>{selItem.title}</div>
               {/* 공연 출처 박스 */}
-              {selItem.showTag&&<div style={{background:"#E3F3F9",borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+              {selItem.showTag&&selItem.showTag!=="공연없음"&&selItem.showTag!=="없음"&&<div style={{background:"#E3F3F9",borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:16}}>🎭</span>
                 <span style={{fontSize:13,color:ACCENT,fontWeight:500}}>{selItem.showTag}에서 쓰던 거예요</span>
               </div>}
