@@ -606,6 +606,8 @@ export default function App(){
   const tb=(t)=>({flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"8px 0",cursor:"pointer",fontSize:11,color:btab===t?ACCENT:"#aaa",fontWeight:btab===t?500:400,border:"none",background:"none"});
   const tic=(t)=>({fontSize:22,color:btab===t?ACCENT:"#bbb"});
   const mkBadge=(label,bg,color)=>(<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:bg,color,fontWeight:500}}>{label}</span>);
+  const [shareToast,setShareToast]=useState(false);
+  const sharePost=(title,text)=>{const url="https://gongssujae.vercel.app";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
   const CAT_ICON={"세트":"🎪","소품":"🪑","의상":"👘","장비":"🔦","기타":"📦"};
   const STATUS_LABEL={"selling":"판매중","reserved":"예약중","done":"거래완료"};
   const STATUS_STYLE={"selling":{background:"#e8f5e9",color:"#2e7d32"},"reserved":{background:"#fff3e0",color:"#e65100"},"done":{background:"rgba(0,0,0,0.35)",color:"#fff"}};
@@ -821,6 +823,7 @@ export default function App(){
               {isOwner&&<button onClick={()=>boostItem(selItem.id)} style={{background:LIGHT,border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,color:ACCENT,cursor:"pointer",fontWeight:500}}>⬆ 끌어올리기</button>}
               {isOwner&&<button onClick={()=>startEdit(selItem)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
               {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteItem(selItem.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
+              <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px"}}><i className="ti ti-share"/></button>
             </div>
           </div>
           <div style={{flex:1,minHeight:0,overflowY:"auto"}}>
@@ -913,9 +916,10 @@ export default function App(){
               <button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
               <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
             </div>
-            <div style={{display:"flex",gap:8}}>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
               {isOwner&&<button onClick={()=>startEditJob(selJob)} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:ACCENT,fontWeight:600}}>수정</button>}
               {isOwner&&<button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?"))deleteJob(selJob.id).then(goHome);}} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#e53935",fontWeight:600}}>삭제</button>}
+              <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px"}}><i className="ti ti-share"/></button>
             </div>
           </div>
           <div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:16}}>
@@ -1070,6 +1074,9 @@ export default function App(){
           {adminTab==="reports"&&(<><div style={{fontSize:12,color:"#aaa",marginBottom:12}}>신고 목록 ({reports.length})</div>{reports.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:40,fontSize:14}}>신고 접수 없음</div>}{reports.map(r=>(<div key={r.id} style={{padding:"14px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}><span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:r.status==="검토중"?"#ffebee":"#f5f5f5",color:r.status==="검토중"?"#c62828":"#9e9e9e",fontWeight:500}}>{r.status}</span><span style={{fontSize:11,color:"#bbb"}}>{r.date||""}</span></div><div style={{fontSize:13,fontWeight:500,marginBottom:2}}>"{r.target}"</div><div style={{fontSize:12,color:"#888",marginBottom:8}}>사유: {r.reason}</div>{r.status==="검토중"&&<div style={{display:"flex",gap:8}}><button onClick={()=>updateReport(r.id,"처리완료")} style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#e8f5e9",color:"#2e7d32",fontSize:12,cursor:"pointer",fontWeight:500}}>처리 완료</button><button onClick={()=>updateReport(r.id,"반려")} style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#f5f5f5",color:"#888",fontSize:12,cursor:"pointer"}}>반려</button></div>}</div>))}</>)}
         </div>
       </div>)}
+
+      {/* 공유 복사 토스트 */}
+      {shareToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:ACCENT,color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>🔗 링크가 복사됐어요</div>}
 
       {/* 하단 네비게이션 */}
       {screen!=="admin"&&(<div style={{position:"absolute",bottom:0,left:0,right:0,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>
