@@ -612,7 +612,7 @@ export default function App(){
   // ── Loading ──
   if(authLoading)return(
     <div className="app-shell" style={{...shellStyle,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:52,marginBottom:12}}>🎭</div><div style={{fontSize:14,color:ACCENT,fontWeight:500}}>공쓰재</div><div style={{fontSize:12,color:"#ccc",marginTop:6}}>로딩 중...</div></div>
+      <div style={{textAlign:"center"}}><img src="/gongssujae_symbol.png" alt="공쓰재" style={{height:64,marginBottom:12}}/><div style={{fontSize:12,color:"#ccc",marginTop:6}}>로딩 중...</div></div>
     </div>
   );
 
@@ -624,8 +624,7 @@ export default function App(){
 
     if(authStep==="splash")return(
       <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,boxSizing:"border-box"}}>
-        <div style={{fontSize:64,marginBottom:16}}>🎭</div>
-        <div style={{fontSize:28,fontWeight:600,color:ACCENT,marginBottom:8}}>공쓰재</div>
+        <img src="/gongssujae_logo_full.png" alt="공쓰재" style={{width:"100%",maxWidth:260,marginBottom:32}}/>
         <div style={{fontSize:13,color:"#999",textAlign:"center",lineHeight:1.7,marginBottom:48}}>공연에 쓰고 남은 물건과 일자리를<br/>나누는 공연인들의 플랫폼</div>
         <button onClick={()=>{setAuthStep("register");setAuthError("");}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:12}}>시작하기</button>
         <button onClick={()=>{setAuthStep("login");setAuthError("");}} style={{width:"100%",height:50,borderRadius:14,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:15,fontWeight:500,cursor:"pointer"}}>이미 계정이 있어요</button>
@@ -695,9 +694,12 @@ export default function App(){
       {screen==="home"&&(<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div style={{padding:"14px 16px 0",borderBottom:`0.5px solid ${DIVIDER}`,background:BG,flexShrink:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <div style={{userSelect:"none"}}>
-              <div style={{fontSize:22,fontWeight:700,color:ACCENT,letterSpacing:-0.5}}>공쓰재</div>
-              <div style={{fontSize:11,color:"#aaa",marginTop:1}}>공연 쓰고 남은 거, 재활용</div>
+            <div style={{userSelect:"none",display:"flex",alignItems:"center",gap:8}}>
+              <img src="/gongssujae_symbol.png" alt="공쓰재 심볼" style={{height:26}}/>
+              <div>
+                <div style={{fontSize:22,fontWeight:700,color:ACCENT,letterSpacing:-0.5}}>공쓰재</div>
+                <div style={{fontSize:11,color:"#aaa",marginTop:1}}>공연 쓰고 남은 거, 재활용</div>
+              </div>
             </div>
             <div style={{display:"flex",gap:2,alignItems:"center"}}>
               <button onClick={()=>setShowSearch(s=>{if(s)setQ("");return !s;})} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:showSearch?ACCENT:"#888",padding:"4px 8px"}}><i className="ti ti-search"/></button>
