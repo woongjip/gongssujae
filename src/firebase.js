@@ -2,7 +2,8 @@ import { initializeApp } from "firebase/app";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, getDocs, increment, deleteField
+  setDoc, getDoc, where, getDocs, increment, deleteField,
+  arrayUnion, arrayRemove
 } from "firebase/firestore";
 import {
   getAuth, createUserWithEmailAndPassword,
@@ -60,6 +61,7 @@ export {
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, getDocs, increment, deleteField,
+  arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut
 };

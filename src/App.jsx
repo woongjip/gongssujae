@@ -4,7 +4,7 @@ import {
   db, auth, registerFCMToken, unregisterFCMToken,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, increment,
+  setDoc, getDoc, where, increment, arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut
 } from "./firebase";
@@ -392,13 +392,9 @@ export default function App(){
     e?.stopPropagation();
     if(!currentUser)return;
     const item=items.find(i=>i.id===itemId);if(!item)return;
-    const likedBy=item.likedBy||[];
-    const isLiked=likedBy.includes(currentUser.uid);
-    const newLikedBy=isLiked?likedBy.filter(u=>u!==currentUser.uid):[...likedBy,currentUser.uid];
+    const isLiked=(item.likedBy||[]).includes(currentUser.uid);
     try{
-      await updateDoc(doc(db,"items",itemId),{likedBy:newLikedBy});
-      // 상세 화면에서도 즉시 UI 반영
-      if(selItem?.id===itemId)setSelItem(p=>p?{...p,likedBy:newLikedBy}:p);
+      await updateDoc(doc(db,"items",itemId),{likedBy:isLiked?arrayRemove(currentUser.uid):arrayUnion(currentUser.uid)});
     }catch(err){
       console.log("찜 오류 (Firestore 규칙 확인 필요):",err);
     }
