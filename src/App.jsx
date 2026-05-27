@@ -150,6 +150,8 @@ export default function App(){
   const [postMode,setPostMode]=useState("item");
   const [posted,setPosted]=useState(false);
   const [formError,setFormError]=useState("");
+  const [fullscreenMapData,setFullscreenMapData]=useState(null);
+  const [addrToast,setAddrToast]=useState(false);
   const [notify,setNotify]=useState({comment:true,keyword:true,newItem:false,job:true});
   const [kwds,setKwds]=useState([]);
   const [newKwd,setNewKwd]=useState("");
@@ -544,6 +546,37 @@ export default function App(){
     return()=>{cancelled=true;};
   },[screen,selItem?.tradePlace]);
 
+  // 전체화면 지도 초기화
+  useEffect(()=>{
+    if(!fullscreenMapData)return;
+    let cancelled=false;
+    loadKakaoSDK(()=>{
+      if(cancelled)return;
+      const el=document.getElementById("kakaoMapFullscreen");
+      if(!el)return;
+      try{
+        const lat=fullscreenMapData.lat||37.5665;
+        const lng=fullscreenMapData.lng||126.9780;
+        const coords=new window.kakao.maps.LatLng(lat,lng);
+        const map=new window.kakao.maps.Map(el,{center:coords,level:4});
+        map.relayout();
+        new window.kakao.maps.Marker({map,position:coords});
+        if(!fullscreenMapData.lat&&fullscreenMapData.place){
+          const ps=new window.kakao.maps.services.Places();
+          ps.keywordSearch(fullscreenMapData.place,(result,status)=>{
+            if(cancelled)return;
+            if(status===window.kakao.maps.services.Status.OK){
+              const c=new window.kakao.maps.LatLng(result[0].y,result[0].x);
+              map.setCenter(c);
+              new window.kakao.maps.Marker({map,position:c});
+            }
+          });
+        }
+      }catch(e){console.log("fullscreen map error:",e);}
+    });
+    return()=>{cancelled=true;};
+  },[fullscreenMapData]);
+
   async function updateMyProfile(updates){
     if(!currentUser)return;
     await updateDoc(doc(db,"users",currentUser.uid),updates);
@@ -887,7 +920,10 @@ export default function App(){
                 <div style={{fontSize:11,color:"#aaa",marginBottom:6}}>받으러 올 곳</div>
                 <div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div>
               </div>
-              <div id="kakaoMapDetail" style={{height:180,background:LIGHT}}/>
+              <div style={{position:"relative"}}>
+                <div id="kakaoMapDetail" style={{height:180,background:LIGHT}}/>
+                <button onClick={()=>setFullscreenMapData({lat:selItem.tradeLat||null,lng:selItem.tradeLng||null,place:selItem.tradePlace})} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.52)",border:"none",borderRadius:8,padding:"5px 10px",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:"inherit"}}><i className="ti ti-arrows-maximize" style={{fontSize:12}}/>전체화면</button>
+              </div>
             </div>}
             {/* 판매자 카드 */}
             <div style={{background:"#fff",padding:"14px 16px",marginBottom:8}}>
@@ -1111,6 +1147,26 @@ export default function App(){
         </button>
         <button style={tb("mypage")} onClick={()=>go("mypage","mypage")}><i className="ti ti-user" style={tic("mypage")}/>MY</button>
       </div>)}
+
+      {/* 전체화면 지도 */}
+      {fullscreenMapData&&(
+        <div style={{position:"absolute",inset:0,zIndex:300,display:"flex",flexDirection:"column",background:"#000"}}>
+          <div style={{flexShrink:0,background:BG,padding:"14px 16px",paddingTop:"calc(14px + env(safe-area-inset-top,0px))",display:"flex",alignItems:"center",gap:10,borderBottom:`0.5px solid ${DIVIDER}`}}>
+            <button onClick={()=>setFullscreenMapData(null)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555",flexShrink:0}}><i className="ti ti-arrow-left"/></button>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fullscreenMapData.place}</div>
+              <div style={{fontSize:11,color:"#aaa",marginTop:1}}>거래 희망 장소</div>
+            </div>
+          </div>
+          <div style={{flex:1,position:"relative"}}>
+            <div id="kakaoMapFullscreen" style={{position:"absolute",inset:0}}/>
+          </div>
+          <div style={{flexShrink:0,background:"#fff",padding:"12px 16px",paddingBottom:"calc(12px + env(safe-area-inset-bottom,0px))",borderTop:`0.5px solid ${DIVIDER}`}}>
+            <button onClick={()=>{navigator.clipboard.writeText(fullscreenMapData.place).catch(()=>{const t=document.createElement("textarea");t.value=fullscreenMapData.place;document.body.appendChild(t);t.select();document.execCommand("copy");document.body.removeChild(t);});setAddrToast(true);setTimeout(()=>setAddrToast(false),2200);}} style={{width:"100%",height:48,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><i className="ti ti-copy" style={{fontSize:17}}/>주소 복사</button>
+            {addrToast&&<div style={{textAlign:"center",fontSize:12,color:ACCENT,marginTop:8,fontWeight:500}}>주소가 복사됐어요</div>}
+          </div>
+        </div>
+      )}
 
       {/* 지도 위치 선택 모달 */}
       {showMapPicker&&(
