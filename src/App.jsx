@@ -35,7 +35,7 @@ const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||('ontouchs
 const shellStyle=isMobile
   ?{width:"100%",height:"100dvh",fontFamily:"sans-serif",background:BG,position:"relative",overflow:"hidden"}
   :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
-const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:""};
+const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:"",listingMode:"nanumi"};
 const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
 // index.html에서 SDK를 로드했으므로 준비될 때까지만 폴링
@@ -149,6 +149,7 @@ export default function App(){
   const [chatMsg,setChatMsg]=useState("");
   const [postMode,setPostMode]=useState("item");
   const [posted,setPosted]=useState(false);
+  const [formError,setFormError]=useState("");
   const [notify,setNotify]=useState({comment:true,keyword:true,newItem:false,job:true});
   const [kwds,setKwds]=useState([]);
   const [newKwd,setNewKwd]=useState("");
@@ -400,9 +401,15 @@ export default function App(){
     }
   }
 
+  function showFormError(msg){setFormError(msg);setTimeout(()=>setFormError(""),2500);}
   async function submitItem(){
-    if(!form.title||!currentUser)return;
-    const data={...form,price:form.price?parseInt(form.price):0,seller:userProfile?.affiliation||userProfile?.name||"익명",sellerId:currentUser.uid,si:(userProfile?.name||userProfile?.affiliation||"나")[0],likedBy:editItem?.likedBy||[]};
+    if(!form.title){showFormError("제목을 입력해주세요");return;}
+    if(form.listingMode==="sale"&&!form.price){showFormError("판매 가격을 입력해주세요");return;}
+    if(!currentUser)return;
+    const derivedPostType=form.listingMode==="guhami"?"guhami":"nanumi";
+    const derivedPrice=form.listingMode==="sale"?(parseInt(form.price)||0):0;
+    const {listingMode,...formData}=form;
+    const data={...formData,postType:derivedPostType,price:derivedPrice,showTag:formData.showTag?.trim()||"",seller:userProfile?.affiliation||userProfile?.name||"익명",sellerId:currentUser.uid,si:(userProfile?.name||userProfile?.affiliation||"나")[0],likedBy:editItem?.likedBy||[]};
     if(editItem){await updateDoc(doc(db,"items",editItem.id),{...data,createdAt:editItem.createdAt});setSelItem({...data,id:editItem.id});}
     else{await addDoc(collection(db,"items"),{...data,createdAt:serverTimestamp()});}
     setEditItem(null);setForm(emptyForm);setPosted(true);
@@ -410,7 +417,8 @@ export default function App(){
   }
 
   function startEdit(item){
-    setForm({title:item.title,category:item.category||[],itemName:item.itemName||"",price:item.price?.toString()||"",desc:item.desc||"",region:item.region||"",contact:item.contact||"",safeNum:item.safeNum||false,tradePlace:item.tradePlace||"",tradeLat:item.tradeLat||null,tradeLng:item.tradeLng||null,photos:item.photos||[],status:item.status||"selling",postType:item.postType||"nanumi",showTag:item.showTag||"",showEndDate:item.showEndDate||""});
+    const listingMode=item.postType==="guhami"?"guhami":(item.price>0?"sale":"nanumi");
+    setForm({title:item.title,category:item.category||[],itemName:item.itemName||"",price:item.price?.toString()||"",desc:item.desc||"",region:item.region||"",contact:item.contact||"",safeNum:item.safeNum||false,tradePlace:item.tradePlace||"",tradeLat:item.tradeLat||null,tradeLng:item.tradeLng||null,photos:item.photos||[],status:item.status||"selling",postType:item.postType||"nanumi",showTag:item.showTag||"",showEndDate:item.showEndDate||"",listingMode});
     setEditItem(item);setPostMode("item");go("post","post");
   }
 
@@ -979,10 +987,15 @@ export default function App(){
         <div style={{flex:1,minHeight:0,overflowY:"auto",padding:16,paddingBottom:"calc(32px + env(safe-area-inset-bottom, 0px))"}}>
           {(postMode==="item"||editItem)?(
             <>
-              <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>나누미 / 구하미</div><div style={{display:"flex",gap:8}}>{[["nanumi","나누미",LIGHT,ACCENT],["guhami","구하미","#fce4ec","#c62828"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>setForm(p=>({...p,postType:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${form.postType===k?color:"#e0e0e0"}`,background:form.postType===k?bg:"#fff",color:form.postType===k?color:"#aaa",fontSize:13,fontWeight:form.postType===k?600:400,cursor:"pointer"}}>{l}</button>))}</div></div>
+              <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>유형</div><div style={{display:"flex",gap:6}}>{[["nanumi","🌿 나눔",LIGHT,ACCENT],["sale","판매","#fff8e1","#e65100"],["guhami","구함","#fce4ec","#c62828"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>setForm(p=>({...p,listingMode:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${form.listingMode===k?color:"#e0e0e0"}`,background:form.listingMode===k?bg:"#fff",color:form.listingMode===k?color:"#aaa",fontSize:13,fontWeight:form.listingMode===k?600:400,cursor:"pointer"}}>{l}</button>))}</div></div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>사진 ({form.photos.length}/5)</div><div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}><label style={{width:72,height:72,borderRadius:12,border:`1.5px dashed ${MID}`,background:LIGHT,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}><i className="ti ti-camera" style={{fontSize:22,color:ACCENT}}/><span style={{fontSize:10,color:ACCENT,marginTop:2}}>추가</span><input type="file" accept="image/*" multiple onChange={handlePhotos} style={{display:"none"}}/></label>{form.photos.map((ph,i)=>(<div key={i} style={{position:"relative",flexShrink:0}}><img src={ph} style={{width:72,height:72,borderRadius:12,objectFit:"cover"}} alt=""/><button onClick={()=>setForm(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))} style={{position:"absolute",top:-4,right:-4,width:18,height:18,borderRadius:"50%",background:"#333",border:"none",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>))}</div></div>
-              {[{l:"제목",k:"title",ph:"예: 나무 의자 세트"},{l:"물품명",k:"itemName",ph:"예: 나무 의자"},{l:"🎭 공연/전시명 태그",k:"showTag",ph:"예: 더 헬리콥터쇼 2024"}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={inp}/></div>))}
-              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{form.postType==="guhami"?"희망 예산":"가격 (0이면 무료 나눔)"}</div><input value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} placeholder="0" type="number" style={inp}/></div>
+              {[{l:"제목",k:"title",ph:"예: 나무 의자 세트"},{l:"물품명",k:"itemName",ph:"예: 나무 의자"}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={inp}/></div>))}
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:12,color:"#666",marginBottom:2,fontWeight:500}}>🎭 공연/전시 출처</div>
+                <div style={{fontSize:11,color:"#aaa",marginBottom:6,lineHeight:1.5}}>어느 공연·전시에서 쓰던 건지 적어주세요.<br/>출처가 있으면 더 믿고 가져가요.</div>
+                <input value={form.showTag} onChange={e=>setForm(p=>({...p,showTag:e.target.value}))} placeholder="예: 햄릿 - 극단 도롱뇽" style={inp}/>
+              </div>
+              {form.listingMode==="sale"&&<div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>판매 가격 <span style={{color:"#e53935",fontSize:11}}>*</span></div><input value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} placeholder="예: 15000" type="number" style={inp}/></div>}
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>📅 공연 종료일</div><input value={form.showEndDate} onChange={e=>setForm(p=>({...p,showEndDate:e.target.value}))} type="date" style={inp}/></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>카테고리 (복수 선택)</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{ITEM_CATS_ALL.map(c=>{const a=form.category.includes(c);return(<button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{c}</button>);})}</div></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={form.region} readOnly onClick={()=>setShowR(true)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/>{showR&&(<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:140,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}><div style={{padding:"8px 12px",borderBottom:"0.5px solid #f0f0f0",position:"sticky",top:0,background:"#fff"}}><input value={rSearch} onChange={e=>setRSearch(e.target.value)} placeholder="지역 검색" style={{width:"100%",border:"none",outline:"none",fontSize:13}} autoFocus/></div>{filtR.slice(0,20).map(r=>(<div key={r} onClick={()=>{setForm(p=>({...p,region:r}));setShowR(false);setRSearch("");}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f9f9f9"}}>{r}</div>))}</div>)}</div></div>
@@ -1002,6 +1015,7 @@ export default function App(){
             </>
           )}
           {posted&&<div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:ACCENT,color:"#fff",padding:"12px 24px",borderRadius:14,fontSize:14,fontWeight:500,zIndex:200}}>✓ 완료!</div>}
+          {formError&&<div style={{position:"fixed",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:"#e53935",color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>{formError}</div>}
         </div>
       </div>)}
 
