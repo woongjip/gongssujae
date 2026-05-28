@@ -623,7 +623,7 @@ export default function App(){
 
   // ── Computed ──
   const filtItems=useMemo(()=>{
-    let l=items.filter(i=>i.hidden!==true||i.sellerId===currentUser?.uid);
+    let l=items.filter(i=>i.hidden!==true);
     if(typeFilter==="나눔")l=l.filter(i=>i.postType==="nanumi"&&i.price===0);
     else if(typeFilter==="구함")l=l.filter(i=>i.postType==="guhami");
     else if(typeFilter==="판매")l=l.filter(i=>i.postType==="nanumi"&&i.price>0);
@@ -634,7 +634,7 @@ export default function App(){
   },[items,typeFilter,q,showTagFilter,localFirst,userProfile?.preferredRegion]);
 
   const nanumiDoneCount=useMemo(()=>items.filter(i=>i.postType==="nanumi"&&i.status==="done").length,[items]);
-  const filtJobs=useMemo(()=>{let l=jobs.filter(j=>j.hidden!==true||j.sellerId===currentUser?.uid);if(fld!=="전체")l=l.filter(j=>j.field===fld);if(q)l=l.filter(j=>j.title?.includes(q)||j.org?.includes(q));return l;},[jobs,fld,q,currentUser]);
+  const filtJobs=useMemo(()=>{let l=jobs.filter(j=>j.hidden!==true);if(fld!=="전체")l=l.filter(j=>j.field===fld);if(q)l=l.filter(j=>j.title?.includes(q)||j.org?.includes(q));return l;},[jobs,fld,q,currentUser]);
   const filtPrefR=useMemo(()=>REGIONS.filter(r=>r.includes(prefRSearch)),[prefRSearch]);
   const likedItems=useMemo(()=>items.filter(i=>i.likedBy?.includes(currentUser?.uid)),[items,currentUser]);
   const myItems=useMemo(()=>items.filter(i=>i.sellerId===currentUser?.uid),[items,currentUser]);
