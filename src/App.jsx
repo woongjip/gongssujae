@@ -157,6 +157,7 @@ export default function App(){
   const [newKwd,setNewKwd]=useState("");
   const [rSearch,setRSearch]=useState("");
   const [showR,setShowR]=useState(false);
+  const [showJR,setShowJR]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [editJob,setEditJob]=useState(null);
   const [form,setForm]=useState(emptyForm);
@@ -454,12 +455,14 @@ export default function App(){
   }
 
   async function submitJob(){
-    if(!jform.title||!currentUser)return;
+    if(!jform.title){showFormError("공고 제목을 입력해주세요");return;}
+    if(!currentUser)return;
+    const wasEditing=!!editJob;
     const data={...jform,org:jform.org||userProfile?.affiliation||userProfile?.name||"나",icon:editJob?.icon||"📋",sellerId:currentUser.uid};
-    if(editJob){await updateDoc(doc(db,"jobs",editJob.id),{...data,createdAt:editJob.createdAt});}
+    if(editJob){await updateDoc(doc(db,"jobs",editJob.id),{...data,createdAt:editJob.createdAt});setSelJob({...data,id:editJob.id});}
     else{await addDoc(collection(db,"jobs"),{...data,createdAt:serverTimestamp()});}
     setEditJob(null);setJform(emptyJform);setPosted(true);
-    setTimeout(()=>{setPosted(false);setMainTab("jobs");goHome();},1200);
+    setTimeout(()=>{setPosted(false);if(wasEditing){go("jobdetail");}else{setMainTab("jobs");goHome();}},1200);
   }
 
   function startEditJob(job){setJform({title:job.title,org:job.org||"",field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});setEditJob(job);setPostMode("job");go("post","post");}
@@ -1045,7 +1048,8 @@ export default function App(){
           ):(
             <>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>구인 / 구직</div><div style={{display:"flex",gap:8}}>{[["guin","구인","#e8f4fd","#1565c0"],["gujik","구직","#f3e5f5","#6a1b9a"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>setJform(p=>({...p,jobType:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${jform.jobType===k?color:"#e0e0e0"}`,background:jform.jobType===k?bg:"#fff",color:jform.jobType===k?color:"#aaa",fontSize:13,fontWeight:jform.jobType===k?600:400,cursor:"pointer"}}>{l}</button>))}</div></div>
-              {[{l:"공고 제목",k:"title",ph:"예: 조명 디자이너 구합니다"},{l:"단체/기관명",k:"org",ph:"예: 극단 파도"},{l:"지역",k:"location",ph:"예: 대학로"},{l:"기간",k:"date",ph:"예: 2025.07.01~07.10"},{l:"보수",k:"pay",ph:"예: 협의 / 일 80,000원"}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={jform[f.k]||""} onChange={e=>setJform(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={inp}/></div>))}
+              {[{l:"공고 제목",k:"title",ph:"예: 조명 디자이너 구합니다"},{l:"단체/기관명",k:"org",ph:"예: 극단 파도"},{l:"기간",k:"date",ph:"예: 2025.07.01~07.10"},{l:"보수",k:"pay",ph:"예: 협의 / 일 80,000원"}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={jform[f.k]||""} onChange={e=>setJform(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={inp}/></div>))}
+              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={jform.location||""} readOnly onClick={()=>setShowJR(true)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/>{showJR&&(<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:140,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}><div style={{padding:"8px 12px",borderBottom:"0.5px solid #f0f0f0",position:"sticky",top:0,background:"#fff"}}><input value={rSearch} onChange={e=>setRSearch(e.target.value)} placeholder="지역 검색" style={{width:"100%",border:"none",outline:"none",fontSize:13}} autoFocus/></div>{filtR.slice(0,20).map(r=>(<div key={r} onClick={()=>{setJform(p=>({...p,location:r}));setShowJR(false);setRSearch("");}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f9f9f9"}}>{r}</div>))}</div>)}</div></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>공고 내용</div><textarea value={jform.desc} onChange={e=>setJform(p=>({...p,desc:e.target.value}))} placeholder="모집 조건, 담당 업무 등" rows={3} style={{...inp,resize:"none"}}/></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>분야</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["조명","무대","음향","분장","영상","기타"].map(f=>(<button key={f} onClick={()=>setJform(p=>({...p,field:f}))} style={{padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:jform.field===f?ACCENT:"#e0e0e0",background:jform.field===f?ACCENT:"#fff",color:jform.field===f?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{f}</button>))}</div></div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>고용 형태</div><div style={{display:"flex",gap:6}}>{["단기","장기"].map(t=>(<button key={t} onClick={()=>setJform(p=>({...p,type:t}))} style={{padding:"5px 16px",borderRadius:20,border:"0.5px solid",borderColor:jform.type===t?ACCENT:"#e0e0e0",background:jform.type===t?ACCENT:"#fff",color:jform.type===t?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{t}</button>))}</div></div>
