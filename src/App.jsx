@@ -431,7 +431,6 @@ export default function App(){
       });
     }catch(e){
       console.error("[sendMsg] chat 업데이트 실패:",e);
-      throw e;
     }
     await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
     markChatRead(activeChat);
@@ -655,10 +654,10 @@ export default function App(){
     const uid=currentUser?.uid;
     if(!uid)return 0;
     return chatRooms.reduce((sum,r)=>{
-      if(r.id===activeChat)return sum;
+      if(r.id===activeChat&&screen==="chat")return sum;
       return sum+(r.unreadCount?.[uid]||0);
     },0);
-  },[chatRooms,activeChat,currentUser]);
+  },[chatRooms,activeChat,screen,currentUser]);
 
   // ── 앱 아이콘 뱃지 (App Badging API, iOS 16.4+) ──
   useEffect(()=>{
