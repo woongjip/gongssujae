@@ -27,7 +27,9 @@ const JOB_FIELD_STYLE={
 };
 const jfs=(f)=>JOB_FIELD_STYLE[f]||JOB_FIELD_STYLE["기타"];
 const INTERESTS=["조명","무대","음향","분장","의상","소품","연출","기획","배우","스태프"];
-const REGIONS=["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 마포구","서울 강남구","서울 서초구","서울 송파구","서울 강동구","서울 관악구","서울 동작구","서울 영등포구","서울 강서구","서울 은평구","서울 서대문구","서울 성북구","서울 노원구","서울 도봉구","서울 강북구","서울 양천구","서울 구로구","서울 금천구","서울 중랑구","서울 광진구","서울 동대문구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","대구 중구","대구 동구","대구 서구","인천 중구","인천 동구","인천 미추홀구","인천 연수구","광주 동구","광주 서구","광주 남구","광주 북구","대전 동구","대전 중구","대전 서구","대전 유성구","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안양시","경기 남양주시"];
+const REGIONS=["서울 종로구","서울 중구","서울 용산구","서울 성동구","서울 광진구","서울 동대문구","서울 중랑구","서울 성북구","서울 강북구","서울 도봉구","서울 노원구","서울 은평구","서울 서대문구","서울 마포구","서울 양천구","서울 강서구","서울 구로구","서울 금천구","서울 영등포구","서울 동작구","서울 관악구","서울 서초구","서울 강남구","서울 송파구","서울 강동구","부산 중구","부산 서구","부산 동구","부산 영도구","부산 부산진구","부산 동래구","부산 남구","부산 북구","부산 해운대구","부산 사하구","부산 금정구","부산 강서구","부산 연제구","부산 수영구","부산 사상구","부산 기장군","대구 중구","대구 동구","대구 서구","대구 남구","대구 북구","대구 수성구","대구 달서구","대구 달성군","인천 중구","인천 동구","인천 미추홀구","인천 연수구","인천 남동구","인천 부평구","인천 계양구","인천 서구","인천 강화군","광주 동구","광주 서구","광주 남구","광주 북구","광주 광산구","대전 동구","대전 중구","대전 서구","대전 유성구","대전 대덕구","울산 중구","울산 남구","울산 동구","울산 북구","울산 울주군","세종 세종시","경기 수원시","경기 성남시","경기 고양시","경기 용인시","경기 부천시","경기 안양시","경기 남양주시","경기 화성시","경기 평택시","경기 의정부시","경기 시흥시","경기 파주시","경기 광명시","경기 김포시","경기 군포시","경기 광주시","경기 이천시","경기 양주시","경기 오산시","경기 구리시","경기 안성시","경기 포천시","경기 의왕시","경기 하남시","경기 여주시","강원 춘천시","강원 원주시","강원 강릉시","강원 동해시","강원 태백시","강원 속초시","강원 삼척시","충북 청주시","충북 충주시","충북 제천시","충남 천안시","충남 공주시","충남 보령시","충남 아산시","충남 서산시","전북 전주시","전북 익산시","전북 군산시","전북 정읍시","전북 남원시","전남 목포시","전남 여수시","전남 순천시","전남 나주시","경북 포항시","경북 경주시","경북 김천시","경북 안동시","경북 구미시","경북 영주시","경북 경산시","경남 창원시","경남 진주시","경남 통영시","경남 사천시","경남 김해시","경남 밀양시","경남 거제시","경남 양산시","제주 제주시","제주 서귀포시"];
+const METRO_NAMES={"서울":"서울특별시","부산":"부산광역시","대구":"대구광역시","인천":"인천광역시","광주":"광주광역시","대전":"대전광역시","울산":"울산광역시","세종":"세종특별자치시","경기":"경기도","강원":"강원특별자치도","충북":"충청북도","충남":"충청남도","전북":"전북특별자치도","전남":"전라남도","경북":"경상북도","경남":"경상남도","제주":"제주특별자치도"};
+const METROS=[...new Set(REGIONS.map(r=>r.split(" ")[0]))];
 function fmtTime(ts){const d=ts?.toDate?.();if(!d)return"";const now=new Date();const diff=now-d;const m=Math.floor(diff/60000);if(m<1)return"방금 전";if(m<60)return`${m}분 전`;const h=Math.floor(m/60);if(h<24&&d.toDateString()===now.toDateString())return`${h}시간 전`;const yest=new Date(now);yest.setDate(yest.getDate()-1);if(d.toDateString()===yest.toDateString())return"어제";return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`;}
 function fmtMsgTime(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleTimeString("ko-KR",{hour:"numeric",minute:"2-digit",hour12:true});}
 function fmtDateLabel(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});}
@@ -37,6 +39,38 @@ const shellStyle=isMobile
   :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:"",listingMode:"nanumi"};
 const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
+
+function RegionPicker({open,onChange,onClose}){
+  const [step,setStep]=useState("metro");
+  const [selMetro,setSelMetro]=useState("");
+  useEffect(()=>{if(open){setStep("metro");setSelMetro("");}}, [open]);
+  if(!open)return null;
+  const districts=REGIONS.filter(r=>r.split(" ")[0]===selMetro).map(r=>r.split(" ").slice(1).join(" "));
+  const drop={position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:220,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"};
+  const row={padding:"10px 14px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f5f5f5"};
+  return(
+    <div style={drop}>
+      {step==="metro"?(
+        METROS.map(m=>(
+          <div key={m} onClick={()=>{setSelMetro(m);setStep("district");}} style={row}>
+            {METRO_NAMES[m]}
+          </div>
+        ))
+      ):(
+        <>
+          <div onClick={()=>setStep("metro")} style={{...row,borderBottom:"0.5px solid #e0e0e0",color:ACCENT,fontWeight:600}}>
+            <i className="ti ti-arrow-left" style={{fontSize:11,marginRight:5}}/>{METRO_NAMES[selMetro]}
+          </div>
+          {districts.map(d=>(
+            <div key={d} onClick={()=>{onChange(`${METRO_NAMES[selMetro]} ${d}`);onClose();}} style={row}>
+              {d}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
 
 // index.html에서 SDK를 로드했으므로 준비될 때까지만 폴링
 function loadKakaoSDK(cb){
@@ -155,7 +189,6 @@ export default function App(){
   const [notify,setNotify]=useState({comment:true,keyword:true,newItem:false,job:true});
   const [kwds,setKwds]=useState([]);
   const [newKwd,setNewKwd]=useState("");
-  const [rSearch,setRSearch]=useState("");
   const [showR,setShowR]=useState(false);
   const [showJR,setShowJR]=useState(false);
   const [editItem,setEditItem]=useState(null);
@@ -600,7 +633,6 @@ export default function App(){
 
   const nanumiDoneCount=useMemo(()=>items.filter(i=>i.postType==="nanumi"&&i.status==="done").length,[items]);
   const filtJobs=useMemo(()=>{let l=fld==="전체"?jobs:jobs.filter(j=>j.field===fld);if(q)l=l.filter(j=>j.title?.includes(q)||j.org?.includes(q));return l;},[jobs,fld,q]);
-  const filtR=useMemo(()=>REGIONS.filter(r=>r.includes(rSearch)),[rSearch]);
   const filtPrefR=useMemo(()=>REGIONS.filter(r=>r.includes(prefRSearch)),[prefRSearch]);
   const likedItems=useMemo(()=>items.filter(i=>i.likedBy?.includes(currentUser?.uid)),[items,currentUser]);
   const myItems=useMemo(()=>items.filter(i=>i.sellerId===currentUser?.uid),[items,currentUser]);
@@ -1039,7 +1071,7 @@ export default function App(){
               {form.listingMode==="sale"&&<div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>판매 가격 <span style={{color:"#e53935",fontSize:11}}>*</span></div><input value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} placeholder="예: 15000" type="number" style={inp}/></div>}
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>📅 공연 종료일</div><input value={form.showEndDate} onChange={e=>setForm(p=>({...p,showEndDate:e.target.value}))} type="date" style={inp}/></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>카테고리 (복수 선택)</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{ITEM_CATS_ALL.map(c=>{const a=form.category.includes(c);return(<button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{c}</button>);})}</div></div>
-              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={form.region} readOnly onClick={()=>setShowR(true)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/>{showR&&(<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:140,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}><div style={{padding:"8px 12px",borderBottom:"0.5px solid #f0f0f0",position:"sticky",top:0,background:"#fff"}}><input value={rSearch} onChange={e=>setRSearch(e.target.value)} placeholder="지역 검색" style={{width:"100%",border:"none",outline:"none",fontSize:13}} autoFocus/></div>{filtR.slice(0,20).map(r=>(<div key={r} onClick={()=>{setForm(p=>({...p,region:r}));setShowR(false);setRSearch("");}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f9f9f9"}}>{r}</div>))}</div>)}</div></div>
+              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={form.region} readOnly onClick={()=>setShowR(v=>!v)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/><RegionPicker open={showR} onChange={v=>setForm(p=>({...p,region:v}))} onClose={()=>setShowR(false)}/></div></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>연락처</div><input value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} placeholder="010-0000-0000" style={{...inp,marginBottom:6}}/><label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"#666"}}><input type="checkbox" checked={form.safeNum} onChange={e=>setForm(p=>({...p,safeNum:e.target.checked}))}/>안심번호로 표시하기</label></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>거래 희망 장소</div><div style={{display:"flex",gap:6}}><input value={form.tradePlace} onChange={e=>setForm(p=>({...p,tradePlace:e.target.value,tradeLat:null,tradeLng:null}))} placeholder="예: 대학로 마로니에공원 앞" style={{...inp,flex:1}}/><button type="button" onClick={()=>{setShowMapPicker(true);loadKakaoSDK(()=>setMapPickerLoaded(true));}} style={{flexShrink:0,padding:"0 12px",borderRadius:10,border:`1px solid ${ACCENT}`,background:LIGHT,color:ACCENT,fontSize:12,cursor:"pointer",fontWeight:500,whiteSpace:"nowrap"}}>📍 지도 선택</button></div>{form.tradeLat&&<div style={{fontSize:11,color:ACCENT,marginTop:4}}>📍 위치 선택 완료</div>}</div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>설명</div><textarea value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="물건 상태, 주의사항 등" rows={3} style={{...inp,resize:"none"}}/></div>
@@ -1049,7 +1081,7 @@ export default function App(){
             <>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>구인 / 구직</div><div style={{display:"flex",gap:8}}>{[["guin","구인","#e8f4fd","#1565c0"],["gujik","구직","#f3e5f5","#6a1b9a"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>setJform(p=>({...p,jobType:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${jform.jobType===k?color:"#e0e0e0"}`,background:jform.jobType===k?bg:"#fff",color:jform.jobType===k?color:"#aaa",fontSize:13,fontWeight:jform.jobType===k?600:400,cursor:"pointer"}}>{l}</button>))}</div></div>
               {[{l:"공고 제목",k:"title",ph:"예: 조명 디자이너 구합니다"},{l:"단체/기관명",k:"org",ph:"예: 극단 파도"},{l:"기간",k:"date",ph:"예: 2025.07.01~07.10"},{l:"보수",k:"pay",ph:"예: 협의 / 일 80,000원"}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={jform[f.k]||""} onChange={e=>setJform(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={inp}/></div>))}
-              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={jform.location||""} readOnly onClick={()=>setShowJR(true)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/>{showJR&&(<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e0e0e0",borderRadius:10,zIndex:100,maxHeight:140,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}><div style={{padding:"8px 12px",borderBottom:"0.5px solid #f0f0f0",position:"sticky",top:0,background:"#fff"}}><input value={rSearch} onChange={e=>setRSearch(e.target.value)} placeholder="지역 검색" style={{width:"100%",border:"none",outline:"none",fontSize:13}} autoFocus/></div>{filtR.slice(0,20).map(r=>(<div key={r} onClick={()=>{setJform(p=>({...p,location:r}));setShowJR(false);setRSearch("");}} style={{padding:"10px 12px",fontSize:13,cursor:"pointer",borderBottom:"0.5px solid #f9f9f9"}}>{r}</div>))}</div>)}</div></div>
+              <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={jform.location||""} readOnly onClick={()=>setShowJR(v=>!v)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/><RegionPicker open={showJR} onChange={v=>setJform(p=>({...p,location:v}))} onClose={()=>setShowJR(false)}/></div></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>공고 내용</div><textarea value={jform.desc} onChange={e=>setJform(p=>({...p,desc:e.target.value}))} placeholder="모집 조건, 담당 업무 등" rows={3} style={{...inp,resize:"none"}}/></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>분야</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["조명","무대","음향","분장","영상","기타"].map(f=>(<button key={f} onClick={()=>setJform(p=>({...p,field:f}))} style={{padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:jform.field===f?ACCENT:"#e0e0e0",background:jform.field===f?ACCENT:"#fff",color:jform.field===f?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{f}</button>))}</div></div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>고용 형태</div><div style={{display:"flex",gap:6}}>{["단기","장기"].map(t=>(<button key={t} onClick={()=>setJform(p=>({...p,type:t}))} style={{padding:"5px 16px",borderRadius:20,border:"0.5px solid",borderColor:jform.type===t?ACCENT:"#e0e0e0",background:jform.type===t?ACCENT:"#fff",color:jform.type===t?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{t}</button>))}</div></div>
