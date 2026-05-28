@@ -1172,7 +1172,7 @@ export default function App(){
       {/* 하단 네비게이션 */}
       {screen!=="admin"&&(<div style={{position:"absolute",bottom:0,left:0,right:0,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>
         <button style={tb("home")} onClick={goHome}><i className="ti ti-home" style={tic("home")}/>홈</button>
-        <button style={tb("post")} onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform({...emptyJform,org:userProfile?.affiliation||""});setPostMode("item");go("post","post");}}>
+        <button style={tb("post")} onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform({...emptyJform,org:userProfile?.affiliation||""});setPostMode(mainTab==="jobs"?"job":"item");go("post","post");}}>
           <div style={{width:44,height:44,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-24}}><i className="ti ti-plus" style={{fontSize:22,color:"#fff"}}/></div>
           <span style={{marginTop:2}}>올리기</span>
         </button>
