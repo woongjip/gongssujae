@@ -211,7 +211,6 @@ export default function App(){
   const [reports,setReports]=useState([]);
   const [showMapPicker,setShowMapPicker]=useState(false);
   const [mapPickerLoaded,setMapPickerLoaded]=useState(false);
-  const [chatRecipientId,setChatRecipientId]=useState(null);
   const [showSearch,setShowSearch]=useState(false);
   const [photoIdx,setPhotoIdx]=useState(0);
   const [cropQueue,setCropQueue]=useState([]);
@@ -379,7 +378,6 @@ export default function App(){
     if(!currentUser)return;
     if(sellerId===currentUser.uid){alert("본인 게시글에는 채팅할 수 없습니다");return;}
     const chatId=[currentUser.uid,sellerId].sort().join("_")+"_"+itemId;
-    setChatRecipientId(sellerId);
     setActiveChat(chatId);setChatLabel(itemTitle);go("chat","chatlist");
     const chatRef=doc(db,"chats",chatId);
     const snap=await getDoc(chatRef);
@@ -412,16 +410,30 @@ export default function App(){
   async function sendMsg(){
     if(!chatMsg.trim()||!activeChat||!currentUser)return;
     const text=chatMsg;setChatMsg("");
-    // recipientId 우선순위: (a) chatRooms 구독 데이터 → (b) chatId 파싱 → (c) openChat 저장값
     const uid=currentUser.uid;
-    const fromParticipants=activeChatRoom?.participants?.find(p=>p!==uid);
-    const fromChatId=(()=>{const parts=activeChat.split("_");const a=parts[0],b=parts[1];return a!==uid?a:b!==uid?b:undefined;})();
-    const recipientId=fromParticipants||fromChatId||chatRecipientId||undefined;
-    console.log("[sendMsg]",{activeChat,uid,fromParticipants,fromChatId,chatRecipientId,recipientId});
-    // increment를 addDoc 전에 먼저 커밋해야 Cloud Functions가 읽을 때 반영된 값을 볼 수 있다.
-    if(recipientId)await updateDoc(doc(db,"chats",activeChat),{[`unreadCount.${recipientId}`]:increment(1)});
-    await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:currentUser.uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
-    await updateDoc(doc(db,"chats",activeChat),{lastMessage:text,updatedAt:serverTimestamp()});
+    // recipientId: participants에서 안정적으로 도출. onSnapshot 미도착이면 getDoc 폴백.
+    let recipientId=activeChatRoom?.participants?.find(p=>p!==uid);
+    if(!recipientId){
+      try{
+        const snap=await getDoc(doc(db,"chats",activeChat));
+        recipientId=snap.data()?.participants?.find(p=>p!==uid);
+      }catch(e){
+        console.error("[sendMsg] participants 조회 실패:",e);
+      }
+    }
+    if(!recipientId)console.error("[sendMsg] recipientId를 구할 수 없음. chatId:",activeChat,"uid:",uid);
+    // unreadCount + lastMessage + updatedAt 한 번에 원자적으로 업데이트
+    try{
+      await updateDoc(doc(db,"chats",activeChat),{
+        ...(recipientId?{[`unreadCount.${recipientId}`]:increment(1)}:{}),
+        lastMessage:text,
+        updatedAt:serverTimestamp(),
+      });
+    }catch(e){
+      console.error("[sendMsg] chat 업데이트 실패:",e);
+      throw e;
+    }
+    await addDoc(collection(db,"chats",activeChat,"messages"),{text,from:uid,fromName:userProfile?.name||userProfile?.affiliation||"사용자",createdAt:serverTimestamp()});
     markChatRead(activeChat);
   }
 
