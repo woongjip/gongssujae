@@ -749,7 +749,7 @@ export default function App(){
   const activeChatLinked=useMemo(()=>{const id=activeChatRoom?.itemId;if(!id)return null;return items.find(i=>i.id===id)||jobs.find(j=>j.id===id)||null;},[activeChatRoom,items,jobs]);
   const catStats=useMemo(()=>ITEM_CATS_ALL.map(c=>({label:c,value:items.filter(i=>i.category?.includes(c)).length})),[items]);
   const regionStats=useMemo(()=>{const m={};items.forEach(i=>{const c=i.region?.split(" ")[0]||"기타";m[c]=(m[c]||0)+1;});return Object.entries(m).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);},[items]);
-  const adminStats=useMemo(()=>({totalUsers:allUsers.length,activeUsers:allUsers.filter(u=>u.status!=="suspended").length,totalItems:items.length,doneItems:items.filter(i=>i.status==="done").length,totalJobs:jobs.length,reports:reports.filter(r=>r.status==="검토중").length}),[allUsers,items,jobs,reports]);
+  const adminStats=useMemo(()=>({totalUsers:allUsers.length,activeUsers:allUsers.filter(u=>u.status!=="suspended").length,totalItems:items.length,doneItems:items.filter(i=>i.status==="done").length,totalJobs:jobs.length,reports:reports.filter(r=>r.status==="pending").length}),[allUsers,items,jobs,reports]);
 
   // ── UI Helpers ──
   const inp={width:"100%",borderRadius:10,border:"0.5px solid #e0e0e0",padding:"10px 12px",fontSize:14,boxSizing:"border-box",outline:"none"};
@@ -1237,7 +1237,7 @@ export default function App(){
       {/* 관리자 */}
       {screen==="admin"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
         <div style={{padding:"14px 16px",background:ADMIN_C,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}><div><div style={{fontSize:15,fontWeight:600,color:"#fff"}}>🔐 관리자 모드</div><div style={{fontSize:11,color:"rgba(255,255,255,0.6)",marginTop:1}}>공쓰재 Admin</div></div><button onClick={()=>{goHome();}} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:12,cursor:"pointer"}}>나가기</button></div>
-        <div style={{display:"flex",background:"#f8f9ff",borderBottom:"0.5px solid #e0e0e0",flexShrink:0}}>{[["dashboard","대시보드"],["users","회원"],["posts","게시글"],["stats","통계"],["reports","신고"]].map(([t,l])=>(<button key={t} onClick={()=>setAdminTab(t)} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:11,fontWeight:adminTab===t?600:400,color:adminTab===t?ADMIN_C:"#888",borderBottom:adminTab===t?`2px solid ${ADMIN_C}`:"2px solid transparent"}}>{l}{t==="reports"&&reports.filter(r=>r.status==="검토중").length>0&&<span style={{marginLeft:3,fontSize:9,background:"#e25",color:"#fff",borderRadius:8,padding:"1px 4px"}}>{reports.filter(r=>r.status==="검토중").length}</span>}</button>))}</div>
+        <div style={{display:"flex",background:"#f8f9ff",borderBottom:"0.5px solid #e0e0e0",flexShrink:0}}>{[["dashboard","대시보드"],["users","회원"],["posts","게시글"],["stats","통계"],["reports","신고"]].map(([t,l])=>(<button key={t} onClick={()=>setAdminTab(t)} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:11,fontWeight:adminTab===t?600:400,color:adminTab===t?ADMIN_C:"#888",borderBottom:adminTab===t?`2px solid ${ADMIN_C}`:"2px solid transparent"}}>{l}{t==="reports"&&reports.filter(r=>r.status==="pending").length>0&&<span style={{marginLeft:3,fontSize:9,background:"#e25",color:"#fff",borderRadius:8,padding:"1px 4px"}}>{reports.filter(r=>r.status==="pending").length}</span>}</button>))}</div>
         <div style={{flex:1,minHeight:0,overflowY:"auto",padding:16}}>
           {adminTab==="dashboard"&&(<>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}><StatCard label="총 회원" value={adminStats.totalUsers} color={ADMIN_C}/><StatCard label="활성 회원" value={adminStats.activeUsers} color="#2e7d32"/><StatCard label="총 게시글" value={adminStats.totalItems}/><StatCard label="거래완료" value={adminStats.doneItems} color="#e65100"/><StatCard label="일자리" value={adminStats.totalJobs}/><StatCard label="신고" value={adminStats.reports} color={adminStats.reports>0?"#c62828":"#9e9e9e"}/></div>
@@ -1247,7 +1247,50 @@ export default function App(){
           {adminTab==="users"&&(<><input value={adminUserQ} onChange={e=>setAdminUserQ(e.target.value)} placeholder="이름 또는 소속 검색" style={{...inp,marginBottom:14}}/><div style={{fontSize:12,color:"#aaa",marginBottom:8}}>총 {filtAdminUsers.length}명</div>{filtAdminUsers.map(u=>(<div key={u.id} style={{padding:"12px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||"미입력"}<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>{u.accountType}</span></div><div style={{fontSize:11,color:"#888"}}>{u.email}</div><div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>👏 앙코르 {u.encoreCount||0}회</span>{u.isAdmin&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:600}}>👑 어드민</span>}<span style={{fontSize:10,color:"#aaa"}}>{u.affiliation||"소속 미입력"}</span></div></div><div style={{display:"flex",gap:5,flexShrink:0}}>{u.id!==currentUser?.uid&&<button onClick={()=>toggleAdminRole(u.id)} style={{background:u.isAdmin?"#fff3e0":"#f5f5f5",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.isAdmin?"#e65100":"#666",cursor:"pointer",fontWeight:500}}>{u.isAdmin?"어드민 해제":"👑 지정"}</button>}{u.id!==currentUser?.uid&&<button onClick={()=>{const msg=u.status==="suspended"?"이 회원을 활성화하시겠어요?":"이 회원을 정지하시겠어요?";if(window.confirm(msg))toggleUserStatus(u.id);}} style={{background:u.status==="suspended"?"#e8f5e9":"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.status==="suspended"?"#2e7d32":"#c62828",cursor:"pointer",fontWeight:500}}>{u.status==="suspended"?"활성화":"정지"}</button>}</div></div></div>))}</>)}
           {adminTab==="posts"&&(<><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:10}}>중고 물건 ({items.length})</div>{items.map(item=>(<div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} alt=""/>:<span>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{item.title}</div><div style={{fontSize:11,color:"#aaa"}}>{item.seller} · {item.region}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteItem(item.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:16,marginBottom:10}}>일자리 공고 ({jobs.length})</div>{jobs.map(job=>(<div key={job.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{job.title}</div><div style={{fontSize:11,color:"#aaa"}}>{job.org} · {job.location}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteJob(job.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}</>)}
           {adminTab==="stats"&&(<><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📦 카테고리별</div><BarChart data={catStats}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📍 지역별</div><BarChart data={regionStats} color={ADMIN_C}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>🏷 나누미 / 구하미</div>{(()=>{const nan=items.filter(i=>i.postType==="nanumi").length;const gu=items.filter(i=>i.postType==="guhami").length;const tot=nan+gu||1;return(<div><div style={{display:"flex",height:20,borderRadius:10,overflow:"hidden",marginBottom:8}}><div style={{width:`${(nan/tot)*100}%`,background:ACCENT}}/><div style={{width:`${(gu/tot)*100}%`,background:"#c62828"}}/></div><div style={{display:"flex",gap:16,fontSize:12}}><span style={{color:ACCENT}}>■ 나누미 {nan}개</span><span style={{color:"#c62828"}}>■ 구하미 {gu}개</span></div></div>);})()}</div></>)}
-          {adminTab==="reports"&&(<><div style={{fontSize:12,color:"#aaa",marginBottom:12}}>신고 목록 ({reports.length})</div>{reports.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:40,fontSize:14}}>신고 접수 없음</div>}{reports.map(r=>(<div key={r.id} style={{padding:"14px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}><span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:r.status==="검토중"?"#ffebee":"#f5f5f5",color:r.status==="검토중"?"#c62828":"#9e9e9e",fontWeight:500}}>{r.status}</span><span style={{fontSize:11,color:"#bbb"}}>{r.date||""}</span></div><div style={{fontSize:13,fontWeight:500,marginBottom:2}}>"{r.target}"</div><div style={{fontSize:12,color:"#888",marginBottom:8}}>사유: {r.reason}</div>{r.status==="검토중"&&<div style={{display:"flex",gap:8}}><button onClick={()=>updateReport(r.id,"처리완료")} style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#e8f5e9",color:"#2e7d32",fontSize:12,cursor:"pointer",fontWeight:500}}>처리 완료</button><button onClick={()=>updateReport(r.id,"반려")} style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#f5f5f5",color:"#888",fontSize:12,cursor:"pointer"}}>반려</button></div>}</div>))}</>)}
+          {adminTab==="reports"&&(()=>{
+            const stLabel={pending:"검토중",resolved:"처리완료",rejected:"반려"};
+            const stStyle={pending:{bg:"#ffebee",col:"#c62828"},resolved:{bg:"#e8f5e9",col:"#2e7d32"},rejected:{bg:"#f5f5f5",col:"#9e9e9e"}};
+            const pending=reports.filter(r=>r.status==="pending");
+            const done=reports.filter(r=>r.status!=="pending");
+            const renderReport=r=>{
+              const isDone=r.status!=="pending";
+              const st=stStyle[r.status]||stStyle.rejected;
+              const typeLabel=r.targetType==="item"?"물건":"일자리";
+              const linkedItem=r.targetType==="item"?items.find(i=>i.id===r.targetId):null;
+              const linkedJob=r.targetType==="job"?jobs.find(j=>j.id===r.targetId):null;
+              const hasTarget=linkedItem||linkedJob;
+              return(
+                <div key={r.id} style={{padding:"14px 0",borderBottom:"0.5px solid #f5f5f5",opacity:isDone?0.45:1}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:st.bg,color:st.col,fontWeight:500}}>{stLabel[r.status]||r.status}</span>
+                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:"#f0f4ff",color:"#3949ab",fontWeight:500}}>{typeLabel}</span>
+                    </div>
+                    <span style={{fontSize:11,color:"#bbb"}}>{r.createdAt?.toDate?.()?.toLocaleDateString("ko-KR")||""}</span>
+                  </div>
+                  <div style={{fontSize:12,color:"#888",marginBottom:hasTarget?6:isDone?0:8}}>사유: {r.reason}{r.detail?` — ${r.detail}`:""}</div>
+                  {hasTarget&&<button onClick={()=>{if(linkedItem){goDetail(linkedItem);}else{setSelJob(linkedJob);go("jobdetail");window.location.hash=`#/job/${linkedJob.id}`;}}} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:8,border:`0.5px solid ${ACCENT}`,background:"none",color:ACCENT,fontSize:11,cursor:"pointer",marginBottom:isDone?0:8}}>
+                    <i className="ti ti-external-link" style={{fontSize:11}}/>글 보기
+                  </button>}
+                  {!isDone&&<div style={{display:"flex",gap:8,marginTop:hasTarget?0:0}}>
+                    <button onClick={()=>updateReport(r.id,"resolved")} style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#e8f5e9",color:"#2e7d32",fontSize:12,cursor:"pointer",fontWeight:500}}>처리 완료</button>
+                    <button onClick={()=>updateReport(r.id,"rejected")} style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#f5f5f5",color:"#888",fontSize:12,cursor:"pointer"}}>반려</button>
+                  </div>}
+                </div>
+              );
+            };
+            return(
+              <>
+                <div style={{fontSize:12,color:"#aaa",marginBottom:12}}>신고 목록 ({reports.length}) · 검토중 {pending.length}</div>
+                {reports.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:40,fontSize:14}}>신고 접수 없음</div>}
+                {pending.map(renderReport)}
+                {done.length>0&&<>
+                  <div style={{fontSize:11,color:"#bbb",fontWeight:500,marginTop:16,marginBottom:4,paddingTop:12,borderTop:"0.5px solid #f0f0f0"}}>처리된 신고 ({done.length})</div>
+                  {done.map(renderReport)}
+                </>}
+              </>
+            );
+          })()}
         </div>
       </div>)}
 
