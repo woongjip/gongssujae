@@ -526,7 +526,7 @@ export default function App(){
         const lat=selItem.tradeLat||37.5665;
         const lng=selItem.tradeLng||126.9780;
         const coords=new window.kakao.maps.LatLng(lat,lng);
-        const map=new window.kakao.maps.Map(el,{center:coords,level:4});
+        const map=new window.kakao.maps.Map(el,{center:coords,level:4,draggable:false,scrollwheel:false,disableDoubleClickZoom:true,keyboardShortcuts:false});
         map.relayout(); // Safari/PWA: paint 전 생성 시 빈 지도 방지
         new window.kakao.maps.Marker({map,position:coords});
         if(!selItem.tradeLat){
@@ -920,9 +920,11 @@ export default function App(){
                 <div style={{fontSize:11,color:"#aaa",marginBottom:6}}>받으러 올 곳</div>
                 <div style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}><i className="ti ti-map-pin" style={{fontSize:15,color:ACCENT}}/>{selItem.tradePlace}</div>
               </div>
-              <div style={{position:"relative"}}>
+              <div style={{position:"relative",cursor:"pointer"}} onClick={()=>setFullscreenMapData({lat:selItem.tradeLat||null,lng:selItem.tradeLng||null,place:selItem.tradePlace})}>
                 <div id="kakaoMapDetail" style={{height:180,background:LIGHT}}/>
-                <button onClick={()=>setFullscreenMapData({lat:selItem.tradeLat||null,lng:selItem.tradeLng||null,place:selItem.tradePlace})} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.52)",border:"none",borderRadius:8,padding:"5px 10px",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:"inherit"}}><i className="ti ti-arrows-maximize" style={{fontSize:12}}/>전체화면</button>
+                {/* 투명 클릭 레이어: 카카오맵 touch 이벤트 차단, 탭을 전체화면으로 전달 */}
+                <div style={{position:"absolute",inset:0,zIndex:10}}/>
+                <div style={{position:"absolute",top:8,right:8,zIndex:11,background:"rgba(0,0,0,0.52)",borderRadius:8,padding:"5px 10px",color:"#fff",fontSize:11,display:"flex",alignItems:"center",gap:4,pointerEvents:"none"}}><i className="ti ti-arrows-maximize" style={{fontSize:12}}/>전체화면</div>
               </div>
             </div>}
             {/* 판매자 카드 */}
@@ -1150,7 +1152,7 @@ export default function App(){
 
       {/* 전체화면 지도 */}
       {fullscreenMapData&&(
-        <div style={{position:"absolute",inset:0,zIndex:300,display:"flex",flexDirection:"column",background:"#000"}}>
+        <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",flexDirection:"column",background:"#000"}}>
           <div style={{flexShrink:0,background:BG,padding:"14px 16px",paddingTop:"calc(14px + env(safe-area-inset-top,0px))",display:"flex",alignItems:"center",gap:10,borderBottom:`0.5px solid ${DIVIDER}`}}>
             <button onClick={()=>setFullscreenMapData(null)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555",flexShrink:0}}><i className="ti ti-arrow-left"/></button>
             <div style={{flex:1,minWidth:0}}>
