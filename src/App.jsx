@@ -157,7 +157,7 @@ export default function App(){
   const [currentUser,setCurrentUser]=useState(null);
   const [userProfile,setUserProfile]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
-  const [authStep,setAuthStep]=useState("splash");
+  const [authStep,setAuthStep]=useState(localStorage.getItem("welcomed")?"splash":"welcome");
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
   const [confirmPw,setConfirmPw]=useState("");
@@ -786,6 +786,28 @@ export default function App(){
     const wrap=ch=>(<div className="app-shell" style={{...shellStyle,padding:24,boxSizing:"border-box",display:"flex",flexDirection:"column"}}>{ch}</div>);
     const backBtn=to=>(<button onClick={()=>{setAuthStep(to);setAuthError("");}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555",marginBottom:20,alignSelf:"flex-start"}}><i className="ti ti-arrow-left"/></button>);
     const ErrBox=()=>authError?<div style={{fontSize:12,color:"#c62828",marginBottom:12,padding:"8px 12px",background:"#ffebee",borderRadius:8}}>{authError}</div>:null;
+
+    if(authStep==="welcome"){
+      const doStart=()=>{localStorage.setItem("welcomed","1");setAuthStep("register");setAuthError("");};
+      const doLogin=()=>{localStorage.setItem("welcomed","1");setAuthStep("login");setAuthError("");};
+      return(
+        <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",padding:"0 32px",boxSizing:"border-box",background:BG}}>
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",width:"100%",gap:0}}>
+            <img src="/gongssujae_logo_full.png" alt="공쓰재" style={{width:"100%",maxWidth:200,marginBottom:40}}/>
+            <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",textAlign:"center",lineHeight:1.55,marginBottom:10,letterSpacing:"-0.3px"}}>
+              공연 쓰고 남은 거, 재활용
+            </div>
+            <div style={{fontSize:14,color:"#777",textAlign:"center",lineHeight:1.8,letterSpacing:"-0.1px"}}>
+              나누고, 이어주고, 다음 무대로
+            </div>
+          </div>
+          <div style={{width:"100%",paddingBottom:"max(40px,env(safe-area-inset-bottom,40px))"}}>
+            <button onClick={doStart} style={{width:"100%",height:54,borderRadius:16,border:"none",background:ACCENT,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",marginBottom:12,boxShadow:`0 4px 20px ${ACCENT}55`}}>시작하기</button>
+            <button onClick={doLogin} style={{width:"100%",height:44,borderRadius:16,border:"none",background:"transparent",color:"#999",fontSize:13,cursor:"pointer",fontWeight:400}}>이미 계정이 있어요</button>
+          </div>
+        </div>
+      );
+    }
 
     if(authStep==="splash")return(
       <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,boxSizing:"border-box"}}>
