@@ -558,7 +558,7 @@ export default function App(){
         const lat=fullscreenMapData.lat||37.5665;
         const lng=fullscreenMapData.lng||126.9780;
         const coords=new window.kakao.maps.LatLng(lat,lng);
-        const map=new window.kakao.maps.Map(el,{center:coords,level:4});
+        const map=new window.kakao.maps.Map(el,{center:coords,level:4,draggable:true,scrollwheel:true,disableDoubleClickZoom:false,keyboardShortcuts:true});
         map.relayout();
         new window.kakao.maps.Marker({map,position:coords});
         if(!fullscreenMapData.lat&&fullscreenMapData.place){
