@@ -194,9 +194,6 @@ export default function App(){
   const [showPWAModal,setShowPWAModal]=useState(false);
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [showPushModal,setShowPushModal]=useState(false);
-  const [notify,setNotify]=useState({comment:true,keyword:true,newItem:false,job:true});
-  const [kwds,setKwds]=useState([]);
-  const [newKwd,setNewKwd]=useState("");
   const [showR,setShowR]=useState(false);
   const [showJR,setShowJR]=useState(false);
   const [editItem,setEditItem]=useState(null);
@@ -381,6 +378,9 @@ export default function App(){
       const profileData={...regProf,email,temp:36.5,isAdmin:false,status:"active",createdAt:serverTimestamp()};
       setUserProfile(profileData); // optimistic
       await setDoc(doc(db,"users",cred.user.uid),profileData);
+      if(typeof Notification!=="undefined"&&Notification.permission==="default"&&!localStorage.getItem('pushDismissed')){
+        setShowPushModal(true);
+      }
     }catch(e){
       if(e.code==="auth/email-already-in-use")setAuthError("이미 사용 중인 이메일입니다");
       else setAuthError("회원가입 실패: 다시 시도해주세요");
@@ -1240,7 +1240,7 @@ export default function App(){
 
       {/* 알림 */}
       {screen==="notify"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>알림 설정</span></div><div style={{flex:1,minHeight:0,overflowY:"auto",padding:16,paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))"}}>{(()=>{const perm=typeof Notification!=="undefined"?Notification.permission:"default";return perm==="granted"?(<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#e8f5e9",borderRadius:12,marginBottom:14}}><span style={{fontSize:16}}>🔔</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:"#2e7d32"}}>알림이 켜져 있어요</div><div style={{fontSize:11,color:"#4caf50",marginTop:1}}>채팅 메시지 알림을 받을 수 있어요</div></div></div>):perm==="denied"?(<div style={{padding:"12px 14px",background:"#fff3e0",borderRadius:12,marginBottom:14}}><div style={{fontSize:13,fontWeight:600,color:"#e65100",marginBottom:3}}>🔕 알림이 차단되어 있어요</div><div style={{fontSize:11,color:"#888",lineHeight:1.6}}>브라우저 설정 → 사이트 권한에서<br/>twr.or.kr 알림을 허용해주세요</div></div>):(<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:LIGHT,borderRadius:12,marginBottom:14}}><span style={{fontSize:16}}>🔔</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:ACCENT}}>채팅 알림 받기</div><div style={{fontSize:11,color:"#888",marginTop:1}}>메시지를 놓치지 않으려면 알림을 켜주세요</div></div><button onClick={async()=>{const ok=await requestAndRegisterFCM(currentUser?.uid);if(!ok&&Notification.permission==="denied")alert("브라우저 설정에서 알림을 허용해주세요");}} style={{padding:"6px 12px",borderRadius:8,border:"none",background:ACCENT,color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500,flexShrink:0}}>켜기</button></div>);})()}
-{[{k:"comment",l:"내 게시글에 댓글",d:"댓글이 달리면 알림"},{k:"keyword",l:"키워드 알림",d:"등록 키워드 물건 올라오면 알림"},{k:"newItem",l:"새 물건 등록",d:"관심 카테고리 새 물건 알림"},{k:"job",l:"일자리 공고",d:"새 일자리 공고 알림"}].map(({k,l,d})=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:"0.5px solid #f5f5f5"}}><div><div style={{fontSize:14}}>{l}</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>{d}</div></div><div onClick={()=>setNotify(p=>({...p,[k]:!p[k]}))} style={{width:46,height:27,borderRadius:14,background:notify[k]?ACCENT:"#ddd",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{position:"absolute",top:3,left:notify[k]?21:3,width:21,height:21,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}/></div></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:20,marginBottom:10}}>키워드 관리</div><div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>{kwds.map(kw=>(<div key={kw} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",background:LIGHT,borderRadius:20}}><span style={{fontSize:13,color:ACCENT}}>{kw}</span><button onClick={()=>setKwds(p=>p.filter(k=>k!==kw))} style={{background:"none",border:"none",cursor:"pointer",color:ACCENT,padding:0,fontSize:15,lineHeight:1}}>×</button></div>))}</div><div style={{display:"flex",gap:8}}><input value={newKwd} onChange={e=>setNewKwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} placeholder="키워드 추가" style={{flex:1,borderRadius:10,border:"0.5px solid #e0e0e0",padding:"9px 12px",fontSize:13,outline:"none"}}/><button onClick={()=>{if(newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} style={{padding:"9px 16px",borderRadius:10,border:"none",background:ACCENT,color:"#fff",fontSize:13,cursor:"pointer"}}>추가</button></div></div></div>)}
+<div style={{fontSize:12,color:"#aaa",marginTop:8,lineHeight:1.6}}>채팅 알림 외 키워드·공고 알림은 추후 지원 예정이에요.</div></div></div>)}
 
       {/* 마이페이지 */}
       {screen==="mypage"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG}}>
