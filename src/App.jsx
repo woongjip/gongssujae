@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, Fragment, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import {
-  db, auth, registerFCMToken, unregisterFCMToken,
+  db, auth, registerFCMToken, unregisterFCMToken, requestAndRegisterFCM,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, increment, arrayUnion, arrayRemove,
@@ -34,6 +34,8 @@ function fmtTime(ts){const d=ts?.toDate?.();if(!d)return"";const now=new Date();
 function fmtMsgTime(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleTimeString("ko-KR",{hour:"numeric",minute:"2-digit",hour12:true});}
 function fmtDateLabel(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});}
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||('ontouchstart' in window);
+const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const shellStyle=isMobile
   ?{width:"100%",height:"100dvh",fontFamily:"sans-serif",background:BG,position:"relative",overflow:"hidden"}
   :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
@@ -188,6 +190,10 @@ export default function App(){
   const [formError,setFormError]=useState("");
   const [fullscreenMapData,setFullscreenMapData]=useState(null);
   const [addrToast,setAddrToast]=useState(false);
+  const [showPWABanner,setShowPWABanner]=useState(false);
+  const [showPWAModal,setShowPWAModal]=useState(false);
+  const [deferredPrompt,setDeferredPrompt]=useState(null);
+  const [showPushModal,setShowPushModal]=useState(false);
   const [notify,setNotify]=useState({comment:true,keyword:true,newItem:false,job:true});
   const [kwds,setKwds]=useState([]);
   const [newKwd,setNewKwd]=useState("");
@@ -231,6 +237,20 @@ export default function App(){
   const screenRef=useRef("home");
   const initialHashDone=useRef(false);
   const hashNavRef=useRef(null);
+
+  // ── Android 설치 프롬프트 캡처 ──
+  useEffect(()=>{
+    const handler=(e)=>{e.preventDefault();setDeferredPrompt(e);};
+    window.addEventListener('beforeinstallprompt',handler);
+    return()=>window.removeEventListener('beforeinstallprompt',handler);
+  },[]);
+
+  // ── PWA 설치 배너: 로그인 후 최초 1회 ──
+  useEffect(()=>{
+    if(!currentUser||isStandalone)return;
+    if(localStorage.getItem('pwaInstallDismissed'))return;
+    setShowPWABanner(true);
+  },[currentUser]);
 
   // ── Firebase Auth listener ──
   useEffect(()=>{
@@ -407,6 +427,9 @@ export default function App(){
   async function openChat(itemId,itemTitle,sellerId){
     if(!currentUser)return;
     if(sellerId===currentUser.uid){alert("본인 게시글에는 채팅할 수 없습니다");return;}
+    if(typeof Notification!=="undefined"&&Notification.permission==="default"&&!localStorage.getItem('pushDismissed')){
+      setShowPushModal(true);
+    }
     const chatId=[currentUser.uid,sellerId].sort().join("_")+"_"+itemId;
     setActiveChat(chatId);setChatLabel(itemTitle);go("chat","chatlist");
     const chatRef=doc(db,"chats",chatId);
@@ -910,6 +933,15 @@ export default function App(){
             {[["전체","전체"],["🌿 나눔","나눔"],["구함","구함"],["판매","판매"]].map(([label,val])=>chip(label,typeFilter===val,()=>setTypeFilter(val)))}
           </>:JOB_FIELDS.map(f=>chip(f,fld===f,()=>setFld(f)))}
         </div>}
+        {showPWABanner&&<div style={{margin:"8px 16px 0",padding:"11px 14px",background:"#EBF5FB",borderRadius:14,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <span style={{fontSize:20,flexShrink:0}}>📲</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:600,color:ACCENT,marginBottom:1}}>앱처럼 쓰려면 홈 화면에 추가하세요</div>
+            <div style={{fontSize:11,color:"#777"}}>설치 없이 앱 경험 · 채팅 알림 받기</div>
+          </div>
+          <button onClick={()=>setShowPWAModal(true)} style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${ACCENT}`,background:"none",color:ACCENT,fontSize:11,cursor:"pointer",fontWeight:500,flexShrink:0}}>안내</button>
+          <button onClick={()=>{localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa",padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>
+        </div>}
         <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
           {mainTab==="items"&&nanumiDoneCount>0&&<div style={{margin:"12px 16px 0",padding:"14px 16px",background:LIGHT,borderRadius:14,display:"flex",alignItems:"center",gap:12}}>
             <span style={{fontSize:22,flexShrink:0}}>🌿</span>
@@ -1207,7 +1239,8 @@ export default function App(){
       {screen==="chat"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",boxSizing:"border-box",background:BG}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={()=>go("chatlist","chatlist")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{chatLabel}</div><div style={{fontSize:11,color:"#aaa"}}>채팅</div></div></div>{activeChatLinked&&<div onClick={()=>{if(items.find(i=>i.id===activeChatLinked.id))goDetail(activeChatLinked);else{setSelJob(activeChatLinked);go("jobdetail","chat");window.location.hash=`#/job/${activeChatLinked.id}`;}}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:"0.5px solid #f0f0f0",background:"#fafafa",cursor:"pointer",flexShrink:0}}>{activeChatLinked.photos?.[0]?<img src={activeChatLinked.photos[0]} style={{width:40,height:40,borderRadius:8,objectFit:"cover",flexShrink:0}} alt=""/>:<div style={{width:40,height:40,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{activeChatLinked.icon||"📦"}</div>}<div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{activeChatLinked.title}</div>{activeChatLinked.price!=null&&<div style={{fontSize:11,color:ACCENT,fontWeight:500,marginTop:1}}>{activeChatLinked.price===0?(activeChatLinked.postType==="guhami"?"가격 협의":"무료 나눔"):`${activeChatLinked.price.toLocaleString()}원`}</div>}</div><i className="ti ti-chevron-right" style={{fontSize:14,color:"#ccc",flexShrink:0}}/></div>}<div style={{flex:1,minHeight:0,overflowY:"auto",padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>{messages.map((msg,i)=>{const isMe=msg.from==="me";const prev=messages[i-1];const next=messages[i+1];const d=msg.createdAt?.toDate?.();const pd=prev?.createdAt?.toDate?.();const nd=next?.createdAt?.toDate?.();const showDate=d&&(!pd||d.toDateString()!==pd.toDateString());const sameMinNext=nd&&d&&nd.getFullYear()===d.getFullYear()&&nd.getMonth()===d.getMonth()&&nd.getDate()===d.getDate()&&nd.getHours()===d.getHours()&&nd.getMinutes()===d.getMinutes()&&next.from===msg.from;const showTime=d&&!sameMinNext;return(<Fragment key={msg.id||i}>{showDate&&<div style={{textAlign:"center",margin:"8px 0"}}><span style={{fontSize:11,color:"#aaa",background:"#f0f0f0",borderRadius:10,padding:"3px 12px"}}>{fmtDateLabel(msg.createdAt)}</span></div>}<div style={{display:"flex",justifyContent:isMe?"flex-end":"flex-start"}}><div style={{maxWidth:"75%"}}>{!isMe&&<div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{msg.fromName}</div>}<div style={{display:"flex",alignItems:"flex-end",gap:4,flexDirection:isMe?"row-reverse":"row"}}><div style={{padding:"10px 14px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",background:isMe?ACCENT:"#f3f3f3",color:isMe?"#fff":"#1a1a1a",fontSize:14,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{msg.text}</div>{showTime&&<div style={{fontSize:10,color:"#aaa",flexShrink:0,marginBottom:2}}>{fmtMsgTime(msg.createdAt)}</div>}</div></div></div></Fragment>);})}{messages.length===0&&<div style={{textAlign:"center",color:"#ccc",fontSize:13,marginTop:40}}>메시지를 보내보세요</div>}<div ref={chatEnd}/></div><div style={{flexShrink:0,padding:"10px 12px",borderTop:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",background:"#fff"}}><textarea value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(isMobile)return;if(e.shiftKey)return;e.preventDefault();sendMsg();}}} placeholder="메시지를 입력하세요" rows={1} style={{flex:1,borderRadius:22,border:"1px solid #e0e0e0",padding:"11px 16px",fontSize:14,outline:"none",background:"#fafafa",resize:"none",overflow:"hidden",lineHeight:1.5,fontFamily:"inherit"}}/><button onClick={sendMsg} style={{width:44,height:44,borderRadius:"50%",border:"none",background:chatMsg.trim()?ACCENT:"#ddd",color:"#fff",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-send"/></button></div></div>)}
 
       {/* 알림 */}
-      {screen==="notify"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>알림 설정</span></div><div style={{flex:1,minHeight:0,overflowY:"auto",padding:16,paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))"}}>{[{k:"comment",l:"내 게시글에 댓글",d:"댓글이 달리면 알림"},{k:"keyword",l:"키워드 알림",d:"등록 키워드 물건 올라오면 알림"},{k:"newItem",l:"새 물건 등록",d:"관심 카테고리 새 물건 알림"},{k:"job",l:"일자리 공고",d:"새 일자리 공고 알림"}].map(({k,l,d})=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:"0.5px solid #f5f5f5"}}><div><div style={{fontSize:14}}>{l}</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>{d}</div></div><div onClick={()=>setNotify(p=>({...p,[k]:!p[k]}))} style={{width:46,height:27,borderRadius:14,background:notify[k]?ACCENT:"#ddd",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{position:"absolute",top:3,left:notify[k]?21:3,width:21,height:21,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}/></div></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:20,marginBottom:10}}>키워드 관리</div><div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>{kwds.map(kw=>(<div key={kw} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",background:LIGHT,borderRadius:20}}><span style={{fontSize:13,color:ACCENT}}>{kw}</span><button onClick={()=>setKwds(p=>p.filter(k=>k!==kw))} style={{background:"none",border:"none",cursor:"pointer",color:ACCENT,padding:0,fontSize:15,lineHeight:1}}>×</button></div>))}</div><div style={{display:"flex",gap:8}}><input value={newKwd} onChange={e=>setNewKwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} placeholder="키워드 추가" style={{flex:1,borderRadius:10,border:"0.5px solid #e0e0e0",padding:"9px 12px",fontSize:13,outline:"none"}}/><button onClick={()=>{if(newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} style={{padding:"9px 16px",borderRadius:10,border:"none",background:ACCENT,color:"#fff",fontSize:13,cursor:"pointer"}}>추가</button></div></div></div>)}
+      {screen==="notify"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>알림 설정</span></div><div style={{flex:1,minHeight:0,overflowY:"auto",padding:16,paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))"}}>{(()=>{const perm=typeof Notification!=="undefined"?Notification.permission:"default";return perm==="granted"?(<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#e8f5e9",borderRadius:12,marginBottom:14}}><span style={{fontSize:16}}>🔔</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:"#2e7d32"}}>알림이 켜져 있어요</div><div style={{fontSize:11,color:"#4caf50",marginTop:1}}>채팅 메시지 알림을 받을 수 있어요</div></div></div>):perm==="denied"?(<div style={{padding:"12px 14px",background:"#fff3e0",borderRadius:12,marginBottom:14}}><div style={{fontSize:13,fontWeight:600,color:"#e65100",marginBottom:3}}>🔕 알림이 차단되어 있어요</div><div style={{fontSize:11,color:"#888",lineHeight:1.6}}>브라우저 설정 → 사이트 권한에서<br/>twr.or.kr 알림을 허용해주세요</div></div>):(<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:LIGHT,borderRadius:12,marginBottom:14}}><span style={{fontSize:16}}>🔔</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:ACCENT}}>채팅 알림 받기</div><div style={{fontSize:11,color:"#888",marginTop:1}}>메시지를 놓치지 않으려면 알림을 켜주세요</div></div><button onClick={async()=>{const ok=await requestAndRegisterFCM(currentUser?.uid);if(!ok&&Notification.permission==="denied")alert("브라우저 설정에서 알림을 허용해주세요");}} style={{padding:"6px 12px",borderRadius:8,border:"none",background:ACCENT,color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500,flexShrink:0}}>켜기</button></div>);})()}
+{[{k:"comment",l:"내 게시글에 댓글",d:"댓글이 달리면 알림"},{k:"keyword",l:"키워드 알림",d:"등록 키워드 물건 올라오면 알림"},{k:"newItem",l:"새 물건 등록",d:"관심 카테고리 새 물건 알림"},{k:"job",l:"일자리 공고",d:"새 일자리 공고 알림"}].map(({k,l,d})=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:"0.5px solid #f5f5f5"}}><div><div style={{fontSize:14}}>{l}</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>{d}</div></div><div onClick={()=>setNotify(p=>({...p,[k]:!p[k]}))} style={{width:46,height:27,borderRadius:14,background:notify[k]?ACCENT:"#ddd",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{position:"absolute",top:3,left:notify[k]?21:3,width:21,height:21,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}/></div></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:20,marginBottom:10}}>키워드 관리</div><div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>{kwds.map(kw=>(<div key={kw} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",background:LIGHT,borderRadius:20}}><span style={{fontSize:13,color:ACCENT}}>{kw}</span><button onClick={()=>setKwds(p=>p.filter(k=>k!==kw))} style={{background:"none",border:"none",cursor:"pointer",color:ACCENT,padding:0,fontSize:15,lineHeight:1}}>×</button></div>))}</div><div style={{display:"flex",gap:8}}><input value={newKwd} onChange={e=>setNewKwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} placeholder="키워드 추가" style={{flex:1,borderRadius:10,border:"0.5px solid #e0e0e0",padding:"9px 12px",fontSize:13,outline:"none"}}/><button onClick={()=>{if(newKwd.trim()){setKwds(p=>[...p,newKwd.trim()]);setNewKwd("");}}} style={{padding:"9px 16px",borderRadius:10,border:"none",background:ACCENT,color:"#fff",fontSize:13,cursor:"pointer"}}>추가</button></div></div></div>)}
 
       {/* 마이페이지 */}
       {screen==="mypage"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG}}>
@@ -1321,6 +1354,49 @@ export default function App(){
       {shareToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:ACCENT,color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>🔗 링크가 복사됐어요</div>}
       {notFoundToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:"#555",color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>이 게시글은 더 이상 볼 수 없어요</div>}
       {reportToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:"#333",color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>🚩 신고가 접수됐어요. 검토 후 조치할게요</div>}
+
+      {/* PWA 설치 안내 모달 */}
+      {showPWAModal&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setShowPWAModal(false)}>
+        <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px 36px",width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>📲 홈 화면에 추가하기</div>
+          <div style={{fontSize:13,color:"#888",marginBottom:20}}>앱 설치 없이 앱처럼 사용할 수 있어요</div>
+          {isIOS?(<>
+            <div style={{padding:"14px",background:LIGHT,borderRadius:14,marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:6}}>iPhone / iPad (사파리)</div>
+              <div style={{fontSize:13,color:"#444",lineHeight:1.9}}>
+                1. 하단 공유 버튼 <strong>□↑</strong> 탭<br/>
+                2. <strong>'홈 화면에 추가'</strong> 선택<br/>
+                3. 오른쪽 위 <strong>'추가'</strong> 탭
+              </div>
+            </div>
+            <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>사파리 앱에서만 홈 화면 추가가 가능해요</div>
+          </>):deferredPrompt?(<>
+            <div style={{fontSize:13,color:"#555",marginBottom:16,lineHeight:1.6}}>아래 버튼을 누르면 홈 화면에 바로 추가돼요.</div>
+            <button onClick={async()=>{deferredPrompt.prompt();const r=await deferredPrompt.userChoice;if(r.outcome==="accepted"){localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}setDeferredPrompt(null);setShowPWAModal(false);}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer"}}>홈 화면에 추가하기</button>
+          </>):(<>
+            <div style={{padding:"14px",background:LIGHT,borderRadius:14,marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:6}}>Android (크롬)</div>
+              <div style={{fontSize:13,color:"#444",lineHeight:1.9}}>
+                1. 오른쪽 위 <strong>⋮ 메뉴</strong> 탭<br/>
+                2. <strong>'홈 화면에 추가'</strong> 선택<br/>
+                3. <strong>'추가'</strong> 탭
+              </div>
+            </div>
+          </>)}
+          <button onClick={()=>{localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);setShowPWAModal(false);}} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:14,border:"none",background:"#f5f5f5",color:"#999",fontSize:13,cursor:"pointer"}}>다시 보지 않기</button>
+        </div>
+      </div>)}
+
+      {/* 푸시 알림 권한 요청 모달 */}
+      {showPushModal&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setShowPushModal(false)}>
+        <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"28px 20px 36px",width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:18,textAlign:"center",marginBottom:8}}>🔔</div>
+          <div style={{fontSize:16,fontWeight:700,textAlign:"center",marginBottom:6}}>채팅 알림 받기</div>
+          <div style={{fontSize:13,color:"#888",textAlign:"center",lineHeight:1.7,marginBottom:24}}>채팅 메시지를 놓치지 않으려면<br/>알림을 허용해주세요</div>
+          <button onClick={async()=>{const ok=await requestAndRegisterFCM(currentUser?.uid);localStorage.setItem('pushDismissed','1');setShowPushModal(false);if(!ok&&typeof Notification!=="undefined"&&Notification.permission==="denied"){alert("브라우저 설정에서 알림을 허용해주세요");}}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",marginBottom:10}}>알림 허용하기</button>
+          <button onClick={()=>{localStorage.setItem('pushDismissed','1');setShowPushModal(false);}} style={{width:"100%",height:44,borderRadius:14,border:"none",background:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>나중에</button>
+        </div>
+      </div>)}
 
       {/* 하단 네비게이션 */}
       {screen!=="admin"&&(<div style={{position:"absolute",bottom:0,left:0,right:0,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>

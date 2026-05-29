@@ -34,17 +34,31 @@ export async function getMessagingInstance() {
   } catch { return null; }
 }
 
+// 이미 권한이 있을 때만 조용히 토큰 갱신 (onAuthStateChanged에서 자동 호출)
 export async function registerFCMToken(uid) {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   const msg = await getMessagingInstance();
   if (!msg) return;
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return;
     const token = await getToken(msg, { vapidKey: VAPID_KEY });
     if (!token) return;
-    // 중복 토큰 제거는 서버(onFcmTokenUpdated Cloud Function)가 처리한다.
     await updateDoc(doc(db, "users", uid), { fcmToken: token });
   } catch (e) { console.log("FCM 등록 실패:", e); }
+}
+
+// 사용자 액션(버튼 클릭)에서만 호출 — 권한 요청 포함
+export async function requestAndRegisterFCM(uid) {
+  if (typeof Notification === "undefined") return false;
+  const msg = await getMessagingInstance();
+  if (!msg) return false;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return false;
+    const token = await getToken(msg, { vapidKey: VAPID_KEY });
+    if (!token) return false;
+    await updateDoc(doc(db, "users", uid), { fcmToken: token });
+    return true;
+  } catch (e) { console.log("FCM 등록 실패:", e); return false; }
 }
 
 export async function unregisterFCMToken(uid) {
@@ -63,5 +77,5 @@ export {
   setDoc, getDoc, where, getDocs, increment, deleteField,
   arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  onAuthStateChanged, signOut,
 };
