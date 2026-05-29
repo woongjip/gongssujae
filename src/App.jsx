@@ -761,7 +761,7 @@ export default function App(){
   const [shareToast,setShareToast]=useState(false);
   const [notFoundToast,setNotFoundToast]=useState(false);
   const [moreMenu,setMoreMenu]=useState(null); // "item"|"job"|null
-  const sharePost=(title,text,shareUrl)=>{const url=shareUrl||"https://gongssujae.vercel.app";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
+  const sharePost=(title,text,shareUrl)=>{const url=shareUrl||"https://twr.or.kr";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
   const CAT_ICON={"세트":"🎪","소품":"🪑","의상":"👘","장비":"🔦","기타":"📦"};
   const STATUS_LABEL={"selling":"판매중","reserved":"예약중","done":"거래완료"};
   const STATUS_STYLE={"selling":{background:"#e8f5e9",color:"#2e7d32"},"reserved":{background:"#fff3e0",color:"#e65100"},"done":{background:"rgba(0,0,0,0.35)",color:"#fff"}};
@@ -995,7 +995,7 @@ export default function App(){
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goDetailBack} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
-              <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`,`https://gongssujae.vercel.app/#/item/${selItem.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
+              <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`,`https://twr.or.kr/#/item/${selItem.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="item"?null:"item")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="item"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
                 {isOwner&&<><button onClick={()=>{boostItem(selItem.id);setMoreMenu(null);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#333",textAlign:"left"}}><i className="ti ti-arrow-up" style={{color:ACCENT}}/>끌어올리기</button>
@@ -1102,7 +1102,7 @@ export default function App(){
               <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
             </div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
-              <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`,`https://gongssujae.vercel.app/#/job/${selJob.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
+              <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`,`https://twr.or.kr/#/job/${selJob.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="job"?null:"job")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="job"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
                 {isOwner&&<><button onClick={()=>{const isHidden=selJob.hidden===true;setMoreMenu(null);if(isHidden){hideJob(selJob.id,false);}else if(window.confirm("잠시 내리기\n\n다른 사람 목록에서 숨겨져요.\n언제든지 다시 올릴 수 있어요.")){hideJob(selJob.id,true);}}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:selJob.hidden===true?"#2e7d32":"#555",textAlign:"left"}}><i className="ti ti-eye-off" style={{color:selJob.hidden===true?"#2e7d32":"#888"}}/>{selJob.hidden===true?"다시 올리기":"잠시 내리기"}</button>
