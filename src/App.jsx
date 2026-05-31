@@ -38,7 +38,9 @@ const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const shellStyle=isMobile
   ?{width:"100%",height:"100dvh",fontFamily:"sans-serif",background:BG,position:"relative",overflow:"hidden"}
-  :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
+  :isStandalone
+    ?{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",overflow:"hidden",background:BG,height:"100vh",position:"relative"}
+    :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:"",listingMode:"nanumi"};
 const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
 
