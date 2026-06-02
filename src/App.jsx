@@ -6,7 +6,7 @@ import {
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, increment, arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  onAuthStateChanged, signOut, sendPasswordResetEmail
 } from "./firebase";
 
 const ACCENT="#228BB5",LIGHT="#E3F3F9",MID="#3DA1B2",ADMIN_C="#1a237e";
@@ -371,6 +371,18 @@ export default function App(){
     try{await signInWithEmailAndPassword(auth,email,password);}
     catch(e){setAuthError("이메일 또는 비밀번호를 확인해주세요");}
     setAuthBusy(false);
+  }
+
+  async function handleResetPassword(){
+    if(!email.trim()){setAuthError("이메일 주소를 입력해주세요");return;}
+    setAuthError("");setAuthBusy(true);
+    try{
+      await sendPasswordResetEmail(auth,email.trim());
+    }catch(e){
+      // 보안상 계정 존재 여부 노출 안 함 — 어떤 에러든 같은 메시지
+    }
+    setAuthBusy(false);
+    setAuthStep("resetSent");
   }
 
   async function completeRegistration(){
@@ -851,9 +863,28 @@ export default function App(){
       <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>이메일</div><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="이메일 주소" type="email" style={inp}/></div>
       <div style={{marginBottom:16}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>비밀번호</div><input value={password} onChange={e=>setPassword(e.target.value)} placeholder="비밀번호" type="password" onKeyDown={e=>e.key==="Enter"&&handleLogin()} style={inp}/></div>
       <ErrBox/>
-      <button onClick={handleLogin} disabled={authBusy} style={{width:"100%",height:48,borderRadius:12,border:"none",background:email&&password?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:16}}>{authBusy?"로그인 중...":"로그인"}</button>
+      <button onClick={handleLogin} disabled={authBusy} style={{width:"100%",height:48,borderRadius:12,border:"none",background:email&&password?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:12}}>{authBusy?"로그인 중...":"로그인"}</button>
+      <button onClick={()=>{setAuthStep("resetPw");setAuthError("");}} style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer",marginBottom:16}}>비밀번호를 잊으셨나요?</button>
       <button onClick={()=>{setAuthStep("register");setAuthError("");}} style={{background:"none",border:"none",color:ACCENT,fontSize:13,cursor:"pointer"}}>계정이 없으신가요? 회원가입 →</button>
     </>);
+
+    if(authStep==="resetPw")return wrap(<>
+      {backBtn("login")}
+      <div style={{fontSize:22,fontWeight:600,marginBottom:6}}>비밀번호 재설정</div>
+      <div style={{fontSize:13,color:"#999",marginBottom:24}}>가입한 이메일을 입력하면 재설정 링크를 보내드려요</div>
+      <div style={{marginBottom:16}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>이메일</div><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="이메일 주소" type="email" onKeyDown={e=>e.key==="Enter"&&handleResetPassword()} style={inp}/></div>
+      <ErrBox/>
+      <button onClick={handleResetPassword} disabled={authBusy} style={{width:"100%",height:48,borderRadius:12,border:"none",background:email.trim()?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer"}}>{authBusy?"전송 중...":"재설정 메일 보내기"}</button>
+    </>);
+
+    if(authStep==="resetSent")return(
+      <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,boxSizing:"border-box"}}>
+        <div style={{fontSize:48,marginBottom:20}}>📬</div>
+        <div style={{fontSize:18,fontWeight:600,marginBottom:8,textAlign:"center"}}>메일을 보냈어요</div>
+        <div style={{fontSize:14,color:"#888",textAlign:"center",lineHeight:1.7,marginBottom:32}}>재설정 링크를 이메일로 보냈어요.<br/>메일함을 확인해주세요.<br/><span style={{fontSize:12,color:"#bbb"}}>(스팸 폴더도 확인해보세요)</span></div>
+        <button onClick={()=>{setAuthStep("login");setAuthError("");}} style={{width:"100%",height:48,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer"}}>로그인으로 돌아가기</button>
+      </div>
+    );
 
     if(authStep==="register")return wrap(<>
       {backBtn("splash")}
