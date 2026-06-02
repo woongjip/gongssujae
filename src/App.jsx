@@ -215,6 +215,7 @@ export default function App(){
   const [prefRSearch,setPrefRSearch]=useState("");
   const [profileEdit,setProfileEdit]=useState({name:"",phone:"",address:"",affiliation:"",interests:[]});
   const [profileSaved,setProfileSaved]=useState(false);
+  const [sellerProfile,setSellerProfile]=useState(null);
   const [isAdmin,setIsAdmin]=useState(false);
   const [adminTab,setAdminTab]=useState("dashboard");
   const [allUsers,setAllUsers]=useState([]);
@@ -351,6 +352,16 @@ export default function App(){
     const updated=items.find(i=>i.id===selItem.id);
     if(updated)setSelItem(updated);
   },[items]);
+
+  // ── 판매자 프로필 조회 ──
+  useEffect(()=>{
+    const id=screen==="detail"?selItem?.sellerId:screen==="jobdetail"?selJob?.sellerId:null;
+    if(!id){setSellerProfile(null);return;}
+    getDoc(doc(db,"users",id)).then(snap=>{
+      if(snap.exists())setSellerProfile({id:snap.id,...snap.data()});
+      else setSellerProfile(null);
+    }).catch(()=>setSellerProfile(null));
+  },[screen,selItem?.id,selJob?.id]);
 
   // ── 채팅 읽음 처리 ──
   // currentUser를 의존성에 포함: 로그인 정보가 늦게 채워져도 markChatRead가 재실행된다.
@@ -1133,19 +1144,32 @@ export default function App(){
               </div>
             </div>}
             {/* 판매자 카드 */}
-            <div style={{background:"#fff",padding:"14px 16px",marginBottom:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:42,height:42,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:15,flexShrink:0}}>{selItem.si}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:600,marginBottom:2}}>{selItem.seller}</div>
-                  <div style={{fontSize:12,color:"#aaa",display:"flex",gap:8,alignItems:"center"}}>
-                    <span>앙코르 {selItem.sellerEncoreCount||0}회 <span style={{color:"#bbb",fontWeight:400}}>(곧 시작돼요)</span></span>
-                    {(selItem.donateCount||0)>0&&<span>· 나눔 {selItem.donateCount}회</span>}
+            {(()=>{
+              const sp=sellerProfile;
+              const enc=sp?.encoreCount||0;
+              const postCount=items.filter(i=>i.sellerId===selItem.sellerId).length;
+              const displayName=sp?.affiliation||sp?.name||selItem.seller||"익명";
+              const subName=sp?.affiliation&&sp?.name?sp.name:null;
+              const avatar=sp?.accountType==="단체"?"🏢":(displayName[0]||"?");
+              return(
+                <div style={{background:"#fff",padding:"16px",marginBottom:8,borderTop:`0.5px solid ${DIVIDER}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:44,height:44,borderRadius:"50%",background:LIGHT,border:`1.5px solid ${ACCENT}22`,display:"flex",alignItems:"center",justifyContent:"center",color:ACCENT,fontWeight:700,fontSize:sp?.accountType==="단체"?20:16,flexShrink:0}}>{avatar}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:subName?2:3}}>
+                        <span style={{fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayName}</span>
+                        <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:LIGHT,color:ACCENT,fontWeight:500,flexShrink:0}}>{sp?.accountType||"개인"}</span>
+                      </div>
+                      {subName&&<div style={{fontSize:12,color:"#888",marginBottom:3}}>{subName}</div>}
+                      <div style={{display:"flex",gap:8,fontSize:12,flexWrap:"wrap"}}>
+                        <span style={{color:ACCENT,fontWeight:600}}>👏 앙코르 {enc}회{enc===0&&<span style={{color:"#bbb",fontWeight:400}}> (곧 시작돼요)</span>}</span>
+                        <span style={{color:"#bbb"}}>· 물건 게시글 {postCount}개</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/>
-              </div>
-            </div>
+              );
+            })()}
           </div>
           {/* 하단 버튼 */}
           <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(20px + env(safe-area-inset-bottom, 0px))",borderTop:`0.5px solid ${DIVIDER}`,flexShrink:0,display:"flex",gap:8,background:"#fff"}}>
@@ -1215,6 +1239,33 @@ export default function App(){
               </div>}
               <div style={{fontSize:11,color:"#ccc",textAlign:"right",marginBottom:16}}>{fmtTime(selJob.createdAt)}</div>
             </div>
+            {/* 작성자 카드 */}
+            {(()=>{
+              const sp=sellerProfile;
+              const enc=sp?.encoreCount||0;
+              const postCount=jobs.filter(j=>j.sellerId===selJob.sellerId).length;
+              const displayName=sp?.affiliation||sp?.name||selJob.org||"익명";
+              const subName=sp?.affiliation&&sp?.name?sp.name:null;
+              const avatar=sp?.accountType==="단체"?"🏢":(displayName[0]||"?");
+              return(
+                <div style={{background:"#fff",padding:"16px",marginBottom:8,borderTop:`0.5px solid ${DIVIDER}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:44,height:44,borderRadius:"50%",background:LIGHT,border:`1.5px solid ${ACCENT}22`,display:"flex",alignItems:"center",justifyContent:"center",color:ACCENT,fontWeight:700,fontSize:sp?.accountType==="단체"?20:16,flexShrink:0}}>{avatar}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:subName?2:3}}>
+                        <span style={{fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayName}</span>
+                        <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:LIGHT,color:ACCENT,fontWeight:500,flexShrink:0}}>{sp?.accountType||"개인"}</span>
+                      </div>
+                      {subName&&<div style={{fontSize:12,color:"#888",marginBottom:3}}>{subName}</div>}
+                      <div style={{display:"flex",gap:8,fontSize:12,flexWrap:"wrap"}}>
+                        <span style={{color:ACCENT,fontWeight:600}}>👏 앙코르 {enc}회{enc===0&&<span style={{color:"#bbb",fontWeight:400}}> (곧 시작돼요)</span>}</span>
+                        <span style={{color:"#bbb"}}>· 일자리 게시글 {postCount}개</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           {/* 하단 버튼 */}
           <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(20px + env(safe-area-inset-bottom, 0px))",borderTop:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
