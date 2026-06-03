@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useEffect, Fragment, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import {
-  db, auth, registerFCMToken, unregisterFCMToken, requestAndRegisterFCM,
+  db, auth, storage, storageRef, uploadBytes, getDownloadURL,
+  registerFCMToken, unregisterFCMToken, requestAndRegisterFCM,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, increment, arrayUnion, arrayRemove,
@@ -569,6 +570,20 @@ export default function App(){
   }
 
   function showFormError(msg){setFormError(msg);setTimeout(()=>setFormError(""),2500);}
+
+  // base64 data URL → Firebase Storage 업로드 → https:// URL 반환.
+  // 이미 https:// 이면 재업로드 없이 그대로 반환 (수정 시 기존 사진 보존).
+  async function uploadPhotosToStorage(photos,docId){
+    if(!photos?.length)return[];
+    return Promise.all(photos.map(async(photo,i)=>{
+      if(photo.startsWith("https://"))return photo;
+      const blob=await(await fetch(photo)).blob();
+      const sRef=storageRef(storage,`items/${docId}/${i}_${Date.now()}.jpg`);
+      await uploadBytes(sRef,blob);
+      return getDownloadURL(sRef);
+    }));
+  }
+
   async function submitItem(){
     if(!form.title){showFormError("제목을 입력해주세요");return;}
     if(form.listingMode==="sale"&&!form.price){showFormError("판매 가격을 입력해주세요");return;}
@@ -578,8 +593,16 @@ export default function App(){
     const derivedPrice=form.listingMode==="sale"?(parseInt(form.price)||0):0;
     const {listingMode,...formData}=form;
     const data={...formData,postType:derivedPostType,price:derivedPrice,showTag:formData.showTag?.trim()||"",seller:userProfile?.affiliation||userProfile?.name||"익명",sellerId:currentUser.uid,si:(userProfile?.name||userProfile?.affiliation||"나")[0],likedBy:editItem?.likedBy||[]};
-    if(editItem){await updateDoc(doc(db,"items",editItem.id),{...data,createdAt:editItem.createdAt});setSelItem({...data,id:editItem.id});}
-    else{await addDoc(collection(db,"items"),{...data,createdAt:serverTimestamp()});}
+    if(editItem){
+      const photos=await uploadPhotosToStorage(data.photos,editItem.id);
+      const updated={...data,photos};
+      await updateDoc(doc(db,"items",editItem.id),{...updated,createdAt:editItem.createdAt});
+      setSelItem({...updated,id:editItem.id});
+    }else{
+      const newRef=doc(collection(db,"items"));
+      const photos=await uploadPhotosToStorage(data.photos,newRef.id);
+      await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});
+    }
     setEditItem(null);setForm(emptyForm);setPosted(true);
     setTimeout(()=>{setPosted(false);go(editItem?"detail":"home",editItem?undefined:"home");},1200);
   }
@@ -861,12 +884,15 @@ export default function App(){
     const desc=type==="item"
       ?[post.postType==="guhami"?"구함":post.price?`${Number(post.price).toLocaleString()}원`:"나눔",post.region].filter(Boolean).join(" · ")
       :[post.field,post.jobType==="gujik"?"구직":"구인",post.region].filter(Boolean).join(" · ");
+    // Storage URL(https://)만 카카오 서버에서 가져올 수 있음. base64 또는 없으면 로고 fallback.
+    const firstPhoto=post.photos?.find(p=>typeof p==="string"&&p.startsWith("https://"));
+    const imageUrl=firstPhoto||"https://twr.or.kr/gongssujae_logo_full.png";
     window.Kakao.Share.sendDefault({
       objectType:"feed",
       content:{
         title:post.title,
         description:`${desc} · 공쓰재`,
-        imageUrl:"https://twr.or.kr/gongssujae_logo_full.png",
+        imageUrl,
         link:{mobileWebUrl:url,webUrl:url},
       },
       buttons:[{title:"공쓰재에서 보기",link:{mobileWebUrl:url,webUrl:url}}],
