@@ -1400,6 +1400,7 @@ export default function App(){
                 </div>
                 <button onClick={async()=>{try{await sendEmailVerification(currentUser);setEmailVerifSent(true);setTimeout(()=>setEmailVerifSent(false),3000);}catch(e){alert("잠시 후 다시 시도해주세요");}}} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"#e65100",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:500,flexShrink:0}}>재발송</button>
               </div>
+              <div style={{fontSize:11,color:"#999",marginTop:7,paddingLeft:2}}>📬 인증 메일이 스팸함(정크함)에 있을 수 있어요. 메일이 안 보이면 확인해주세요.</div>
               {emailVerifSent&&<div style={{fontSize:11,color:"#e65100",textAlign:"center",marginTop:6,fontWeight:500}}>인증 메일을 재발송했어요. 메일함을 확인해주세요</div>}
             </div>}
             {[["알림 설정","ti-bell"],["거래 내역","ti-repeat"]].map(([l,ic])=>(<div key={l} onClick={()=>{if(l==="알림 설정")go("notify","");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className={`ti ${ic}`} style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>{l}</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>))}
