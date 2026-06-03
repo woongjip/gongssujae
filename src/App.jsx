@@ -260,6 +260,13 @@ export default function App(){
     return()=>window.removeEventListener('beforeinstallprompt',handler);
   },[]);
 
+  // ── 카카오 공유 SDK 초기화 (window.Kakao — 지도 SDK와 별개) ──
+  useEffect(()=>{
+    if(window.Kakao&&!window.Kakao.isInitialized()){
+      window.Kakao.init("9c3090415c027e63579160554b84854d");
+    }
+  },[]);
+
   // ── PWA 설치 배너: 로그인 후 최초 1회 ──
   useEffect(()=>{
     if(!currentUser||isStandalone)return;
@@ -848,6 +855,23 @@ export default function App(){
   const [notFoundToast,setNotFoundToast]=useState(false);
   const [moreMenu,setMoreMenu]=useState(null); // "item"|"job"|null
   const sharePost=(title,text,shareUrl)=>{const url=shareUrl||"https://twr.or.kr";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
+  const shareKakao=(type,post)=>{
+    if(!window.Kakao?.Share)return;
+    const url=`https://twr.or.kr/#/${type}/${post.id}`;
+    const desc=type==="item"
+      ?[post.postType==="guhami"?"구함":post.price?`${Number(post.price).toLocaleString()}원`:"나눔",post.region].filter(Boolean).join(" · ")
+      :[post.field,post.jobType==="gujik"?"구직":"구인",post.region].filter(Boolean).join(" · ");
+    window.Kakao.Share.sendDefault({
+      objectType:"feed",
+      content:{
+        title:post.title,
+        description:`${desc} · 공쓰재`,
+        imageUrl:"https://twr.or.kr/gongssujae_logo_full.png",
+        link:{mobileWebUrl:url,webUrl:url},
+      },
+      buttons:[{title:"공쓰재에서 보기",link:{mobileWebUrl:url,webUrl:url}}],
+    });
+  };
   const CAT_ICON={"세트":"🎪","소품":"🪑","의상":"👘","장비":"🔦","기타":"📦"};
   const STATUS_LABEL={"selling":"판매중","reserved":"예약중","done":"거래완료"};
   const STATUS_STYLE={"selling":{background:"#e8f5e9",color:"#2e7d32"},"reserved":{background:"#fff3e0",color:"#e65100"},"done":{background:"rgba(0,0,0,0.35)",color:"#fff"}};
@@ -1108,6 +1132,7 @@ export default function App(){
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goDetailBack} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
+              {window.Kakao?.Share&&<button onClick={()=>shareKakao("item",selItem)} style={{background:"#FEE500",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",color:"#3C1E1E",letterSpacing:-0.3}}>카톡</button>}
               <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`,`https://twr.or.kr/#/item/${selItem.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="item"?null:"item")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="item"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
@@ -1228,6 +1253,7 @@ export default function App(){
               <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
             </div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
+              {window.Kakao?.Share&&<button onClick={()=>shareKakao("job",selJob)} style={{background:"#FEE500",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",color:"#3C1E1E",letterSpacing:-0.3}}>카톡</button>}
               <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`,`https://twr.or.kr/#/job/${selJob.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="job"?null:"job")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="job"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
