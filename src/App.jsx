@@ -718,6 +718,26 @@ export default function App(){
 
   useEffect(()=>setPhotoIdx(0),[selItem?.id]);
 
+  // 구게시글 base64 사진 → Storage 자동 마이그레이션.
+  // 소유자가 상세를 열 때 백그라운드에서 변환 후 selItem 상태와 Firestore를 모두 갱신.
+  // "카톡" 버튼을 누르기 전에 https:// URL이 준비되어 공유 카드에 실제 사진이 뜸.
+  useEffect(()=>{
+    if(!selItem||!currentUser)return;
+    if(selItem.sellerId!==currentUser.uid)return;
+    const needsMigration=selItem.photos?.some(p=>typeof p==="string"&&p.startsWith("data:"));
+    if(!needsMigration)return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const uploaded=await uploadPhotosToStorage(selItem.photos,selItem.id);
+        if(cancelled)return;
+        await updateDoc(doc(db,"items",selItem.id),{photos:uploaded});
+        setSelItem(p=>p?{...p,photos:uploaded}:p);
+      }catch(e){}
+    })();
+    return()=>{cancelled=true;};
+  },[selItem?.id,currentUser?.uid]);
+
   // 카카오맵 로드
   useEffect(()=>{
     if(screen!=="detail"||!selItem?.tradePlace)return;
