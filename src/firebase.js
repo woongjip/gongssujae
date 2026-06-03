@@ -8,7 +8,7 @@ import {
 import {
   getAuth, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
-  sendPasswordResetEmail
+  sendPasswordResetEmail, sendEmailVerification
 } from "firebase/auth";
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 
@@ -78,5 +78,5 @@ export {
   setDoc, getDoc, where, getDocs, increment, deleteField,
   arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, sendPasswordResetEmail,
+  onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification,
 };

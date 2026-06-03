@@ -6,7 +6,8 @@ import {
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, increment, arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, sendPasswordResetEmail
+  onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification,
+  deleteField
 } from "./firebase";
 
 const ACCENT="#228BB5",LIGHT="#E3F3F9",MID="#3DA1B2",ADMIN_C="#1a237e";
@@ -219,7 +220,9 @@ export default function App(){
   const [isAdmin,setIsAdmin]=useState(false);
   const [adminTab,setAdminTab]=useState("dashboard");
   const [allUsers,setAllUsers]=useState([]);
+  const [allUserPrivate,setAllUserPrivate]=useState({});
   const [adminUserQ,setAdminUserQ]=useState("");
+  const [emailVerifSent,setEmailVerifSent]=useState(false);
   const [reports,setReports]=useState([]);
   const [showMapPicker,setShowMapPicker]=useState(false);
   const [mapPickerLoaded,setMapPickerLoaded]=useState(false);
@@ -260,10 +263,21 @@ export default function App(){
         try{
           const snap=await getDoc(doc(db,"users",user.uid));
           if(snap.exists()){
-            setUserProfile(snap.data());
-            const admin=snap.data()?.isAdmin===true;
+            const userData={...snap.data()};
+            const admin=userData.isAdmin===true;
             setIsAdmin(admin);
-            console.log("[auth] uid:",user.uid,"isAdmin from getDoc:",admin,snap.data()?.isAdmin);
+            // phone은 userPrivate에서 로드 (또는 users 문서에서 마이그레이션)
+            try{
+              const privSnap=await getDoc(doc(db,"userPrivate",user.uid));
+              if(privSnap.exists()){
+                userData.phone=privSnap.data().phone||"";
+              }else if(userData.phone){
+                // 기존 계정 마이그레이션: users → userPrivate
+                await setDoc(doc(db,"userPrivate",user.uid),{phone:userData.phone});
+                await updateDoc(doc(db,"users",user.uid),{phone:deleteField()});
+              }
+            }catch(e){console.log("userPrivate load:",e);}
+            setUserProfile(userData);
           }
           registerFCMToken(user.uid);
         }catch(e){console.log("profile load:",e);}
@@ -329,12 +343,13 @@ export default function App(){
     return()=>unsub();
   },[activeChat,screen,currentUser]);
 
-  // ── Admin: users + reports ──
+  // ── Admin: users + reports + userPrivate ──
   useEffect(()=>{
     if(!isAdmin||!currentUser)return;
     const u1=onSnapshot(collection(db,"users"),snap=>setAllUsers(snap.docs.map(d=>({id:d.id,...d.data()}))));
     const u2=onSnapshot(collection(db,"reports"),snap=>setReports(snap.docs.map(d=>({id:d.id,...d.data()}))));
-    return()=>{u1();u2();};
+    const u3=onSnapshot(collection(db,"userPrivate"),snap=>{const m={};snap.docs.forEach(d=>{m[d.id]=d.data();});setAllUserPrivate(m);});
+    return()=>{u1();u2();u3();};
   },[isAdmin,currentUser]);
 
   // 채팅방을 보는 중 새 메시지 도착 시 즉시 다시 읽음 처리.
@@ -377,6 +392,8 @@ export default function App(){
 
 
   // ── Auth functions ──
+  function isValidPhone(v){const d=v.replace(/[^0-9]/g,"");return d.length>=10&&d.length<=11;}
+
   async function handleLogin(){
     setAuthError("");setAuthBusy(true);
     try{await signInWithEmailAndPassword(auth,email,password);}
@@ -397,12 +414,18 @@ export default function App(){
   }
 
   async function completeRegistration(){
+    if(!regProf.name.trim()){setAuthError("이름을 입력해주세요");return;}
+    if(!regProf.phone.trim()){setAuthError("전화번호를 입력해주세요");return;}
+    if(!isValidPhone(regProf.phone)){setAuthError("전화번호 형식이 올바르지 않아요 (예: 010-1234-5678)");return;}
     setAuthError("");setAuthBusy(true);
     try{
       const cred=await createUserWithEmailAndPassword(auth,email,password);
-      const profileData={...regProf,email,temp:36.5,isAdmin:false,status:"active",createdAt:serverTimestamp()};
-      setUserProfile(profileData); // optimistic
+      const{phone,...publicProf}=regProf;
+      const profileData={...publicProf,email,temp:36.5,isAdmin:false,status:"active",createdAt:serverTimestamp()};
+      setUserProfile({...profileData,phone}); // optimistic
       await setDoc(doc(db,"users",cred.user.uid),profileData);
+      await setDoc(doc(db,"userPrivate",cred.user.uid),{phone});
+      try{await sendEmailVerification(cred.user);}catch(e){console.log("email verif:",e);}
       if(typeof Notification!=="undefined"&&Notification.permission==="default"&&!localStorage.getItem('pushDismissed')){
         setShowPushModal(true);
       }
@@ -719,7 +742,9 @@ export default function App(){
 
   async function updateMyProfile(updates){
     if(!currentUser)return;
-    await updateDoc(doc(db,"users",currentUser.uid),updates);
+    const{phone,...publicUpdates}=updates;
+    if(Object.keys(publicUpdates).length>0)await updateDoc(doc(db,"users",currentUser.uid),publicUpdates);
+    if(phone!==undefined)await setDoc(doc(db,"userPrivate",currentUser.uid),{phone},{merge:true});
     setUserProfile(p=>({...p,...updates}));
   }
 
@@ -925,16 +950,15 @@ export default function App(){
 
     if(authStep==="profile")return wrap(<>
       <div style={{fontSize:20,fontWeight:600,marginBottom:4}}>프로필 등록</div>
-      <div style={{fontSize:13,color:"#999",marginBottom:18}}>더 나은 서비스를 위해 입력해주세요 (선택)</div>
+      <div style={{fontSize:13,color:"#999",marginBottom:18}}>이름·전화번호는 필수입니다</div>
       <div style={{flex:1,minHeight:0,overflowY:"auto"}}>
-        {[{l:"이름",k:"name",ph:"예: 김민준"},{l:"전화번호",k:"phone",ph:"010-0000-0000",t:"tel"},{l:"주소",k:"address",ph:"예: 서울 마포구"},{l:"소속",k:"affiliation",ph:"예: 극단 파도"}].map(f=>(<div key={f.k} style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:5,fontWeight:500}}>{f.l}</div><input value={regProf[f.k]} onChange={e=>setRegProf(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} type={f.t||"text"} style={inp}/></div>))}
+        {[{l:"이름",k:"name",ph:"예: 김민준",req:true},{l:"전화번호",k:"phone",ph:"010-0000-0000",t:"tel",req:true},{l:"주소",k:"address",ph:"예: 서울 마포구"},{l:"소속",k:"affiliation",ph:"예: 극단 파도"}].map(f=>(<div key={f.k} style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:5,fontWeight:500}}>{f.l}{f.req&&<span style={{color:"#e25",marginLeft:2}}>*</span>}</div><input value={regProf[f.k]} onChange={e=>setRegProf(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} type={f.t||"text"} style={inp}/></div>))}
         <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>계정 유형</div><div style={{display:"flex",gap:8}}>{[["개인","👤"],["단체","🏢"]].map(([t,icon])=>(<button key={t} onClick={()=>setRegProf(p=>({...p,accountType:t}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${regProf.accountType===t?ACCENT:"#e0e0e0"}`,background:regProf.accountType===t?LIGHT:"#fff",color:regProf.accountType===t?ACCENT:"#888",fontSize:13,cursor:"pointer",fontWeight:regProf.accountType===t?600:400}}>{icon} {t}</button>))}</div></div>
         <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:8,fontWeight:500}}>관심 분야</div><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{INTERESTS.map(i=>{const a=regProf.interests.includes(i);return(<button key={i} onClick={()=>setRegProf(p=>({...p,interests:a?p.interests.filter(x=>x!==i):[...p.interests,i]}))} style={{padding:"6px 14px",borderRadius:20,border:"0.5px solid",borderColor:a?ACCENT:"#e0e0e0",background:a?ACCENT:"#fff",color:a?"#fff":"#555",fontSize:13,cursor:"pointer"}}>{i}</button>);})}</div></div>
         <ErrBox/>
       </div>
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <button onClick={completeRegistration} disabled={authBusy} style={{flex:1,height:48,borderRadius:12,border:"none",background:LIGHT,color:ACCENT,fontSize:14,cursor:"pointer"}}>건너뛰기</button>
-        <button onClick={completeRegistration} disabled={authBusy} style={{flex:2,height:48,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer"}}>{authBusy?"처리 중...":"완료"}</button>
+      <div style={{marginTop:12}}>
+        <button onClick={completeRegistration} disabled={authBusy} style={{width:"100%",height:48,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer"}}>{authBusy?"처리 중...":"완료"}</button>
       </div>
     </>);
 
@@ -1333,7 +1357,10 @@ export default function App(){
             <div style={{position:"relative"}}><div style={{width:56,height:56,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22,fontWeight:600}}>{(userProfile?.name||userProfile?.affiliation||"나")[0]}</div>{userProfile?.accountType==="단체"&&<span style={{position:"absolute",bottom:-2,right:-2,fontSize:14}}>🏢</span>}</div>
             <div style={{flex:1}}>
               <div style={{fontSize:16,fontWeight:500}}>{userProfile?.name||userProfile?.affiliation||"공쓰재 사용자"}</div>
-              <div style={{fontSize:12,color:"#aaa",marginTop:1}}>{userProfile?.email||currentUser?.email}</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:1,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,color:"#aaa"}}>{userProfile?.email||currentUser?.email}</span>
+                {!currentUser?.emailVerified&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:500}}>미인증</span>}
+              </div>
               <div style={{marginTop:5}}>{encoreBadge(userProfile?.encoreCount)}<span style={{fontSize:10,color:"#bbb",marginLeft:6}}>(곧 시작돼요)</span></div>
             </div>
           </div>
@@ -1364,6 +1391,17 @@ export default function App(){
               <button onClick={async()=>{await updateMyProfile({name:profileEdit.name,phone:profileEdit.phone,address:profileEdit.address,affiliation:profileEdit.affiliation,interests:profileEdit.interests});setProfileSaved(true);setTimeout(()=>setProfileSaved(false),2000);}} style={{width:"100%",height:42,borderRadius:12,border:"none",background:ACCENT,color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer",marginTop:4}}>저장</button>
               {profileSaved&&<div style={{textAlign:"center",fontSize:12,color:ACCENT,marginTop:8,fontWeight:500}}>저장되었습니다</div>}
             </div>
+            {!currentUser?.emailVerified&&<div style={{padding:"14px 16px",borderBottom:`0.5px solid ${DIVIDER}`,background:"#fff"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff3e0",borderRadius:10}}>
+                <span style={{fontSize:14}}>✉️</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"#e65100"}}>이메일 인증이 필요해요</div>
+                  <div style={{fontSize:11,color:"#aaa",marginTop:1}}>가입 시 발송된 인증 메일을 확인해주세요</div>
+                </div>
+                <button onClick={async()=>{try{await sendEmailVerification(currentUser);setEmailVerifSent(true);setTimeout(()=>setEmailVerifSent(false),3000);}catch(e){alert("잠시 후 다시 시도해주세요");}}} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"#e65100",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:500,flexShrink:0}}>재발송</button>
+              </div>
+              {emailVerifSent&&<div style={{fontSize:11,color:"#e65100",textAlign:"center",marginTop:6,fontWeight:500}}>인증 메일을 재발송했어요. 메일함을 확인해주세요</div>}
+            </div>}
             {[["알림 설정","ti-bell"],["거래 내역","ti-repeat"]].map(([l,ic])=>(<div key={l} onClick={()=>{if(l==="알림 설정")go("notify","");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className={`ti ${ic}`} style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>{l}</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>))}
             <div onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:10,padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><i className="ti ti-logout" style={{fontSize:18,color:"#e25"}}/><span style={{fontSize:14,color:"#e25"}}>로그아웃</span></div>
             {isAdmin&&<div onClick={()=>go("admin")} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer"}}><span style={{fontSize:12,color:ADMIN_C,fontWeight:500}}>🔐 관리자 패널</span></div>}
@@ -1384,7 +1422,7 @@ export default function App(){
             <div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:10}}>최근 가입 회원</div>
             {[...allUsers].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5).map(u=>(<div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:32,height:32,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||u.email}</div><div style={{fontSize:11,color:"#aaa"}}>{u.email}</div></div><span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:u.status==="suspended"?"#ffebee":"#e8f5e9",color:u.status==="suspended"?"#c62828":"#2e7d32",fontWeight:500}}>{u.status==="suspended"?"정지":"활성"}</span></div>))}
           </>)}
-          {adminTab==="users"&&(<><input value={adminUserQ} onChange={e=>setAdminUserQ(e.target.value)} placeholder="이름 또는 소속 검색" style={{...inp,marginBottom:14}}/><div style={{fontSize:12,color:"#aaa",marginBottom:8}}>총 {filtAdminUsers.length}명</div>{filtAdminUsers.map(u=>(<div key={u.id} style={{padding:"12px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||"미입력"}<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>{u.accountType}</span></div><div style={{fontSize:11,color:"#888"}}>{u.email}</div><div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>👏 앙코르 {u.encoreCount||0}회</span>{u.isAdmin&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:600}}>👑 어드민</span>}<span style={{fontSize:10,color:"#aaa"}}>{u.affiliation||"소속 미입력"}</span></div></div><div style={{display:"flex",gap:5,flexShrink:0}}>{u.id!==currentUser?.uid&&<button onClick={()=>toggleAdminRole(u.id)} style={{background:u.isAdmin?"#fff3e0":"#f5f5f5",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.isAdmin?"#e65100":"#666",cursor:"pointer",fontWeight:500}}>{u.isAdmin?"어드민 해제":"👑 지정"}</button>}{u.id!==currentUser?.uid&&<button onClick={()=>{const msg=u.status==="suspended"?"이 회원을 활성화하시겠어요?":"이 회원을 정지하시겠어요?";if(window.confirm(msg))toggleUserStatus(u.id);}} style={{background:u.status==="suspended"?"#e8f5e9":"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.status==="suspended"?"#2e7d32":"#c62828",cursor:"pointer",fontWeight:500}}>{u.status==="suspended"?"활성화":"정지"}</button>}</div></div></div>))}</>)}
+          {adminTab==="users"&&(<><input value={adminUserQ} onChange={e=>setAdminUserQ(e.target.value)} placeholder="이름 또는 소속 검색" style={{...inp,marginBottom:14}}/><div style={{fontSize:12,color:"#aaa",marginBottom:8}}>총 {filtAdminUsers.length}명</div>{filtAdminUsers.map(u=>(<div key={u.id} style={{padding:"12px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||"미입력"}<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>{u.accountType}</span></div><div style={{fontSize:11,color:"#888"}}>{u.email}</div>{allUserPrivate[u.id]?.phone&&<div style={{fontSize:11,color:"#555",marginTop:1}}>📞 {allUserPrivate[u.id].phone}</div>}<div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>👏 앙코르 {u.encoreCount||0}회</span>{u.isAdmin&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:600}}>👑 어드민</span>}<span style={{fontSize:10,color:"#aaa"}}>{u.affiliation||"소속 미입력"}</span></div></div><div style={{display:"flex",gap:5,flexShrink:0}}>{u.id!==currentUser?.uid&&<button onClick={()=>toggleAdminRole(u.id)} style={{background:u.isAdmin?"#fff3e0":"#f5f5f5",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.isAdmin?"#e65100":"#666",cursor:"pointer",fontWeight:500}}>{u.isAdmin?"어드민 해제":"👑 지정"}</button>}{u.id!==currentUser?.uid&&<button onClick={()=>{const msg=u.status==="suspended"?"이 회원을 활성화하시겠어요?":"이 회원을 정지하시겠어요?";if(window.confirm(msg))toggleUserStatus(u.id);}} style={{background:u.status==="suspended"?"#e8f5e9":"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.status==="suspended"?"#2e7d32":"#c62828",cursor:"pointer",fontWeight:500}}>{u.status==="suspended"?"활성화":"정지"}</button>}</div></div></div>))}</>)}
           {adminTab==="posts"&&(<><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:10}}>중고 물건 ({items.length})</div>{items.map(item=>(<div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} alt=""/>:<span>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{item.title}</div><div style={{fontSize:11,color:"#aaa"}}>{item.seller} · {item.region}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteItem(item.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:16,marginBottom:10}}>일자리 공고 ({jobs.length})</div>{jobs.map(job=>(<div key={job.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{job.title}</div><div style={{fontSize:11,color:"#aaa"}}>{job.org} · {job.location}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteJob(job.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}</>)}
           {adminTab==="stats"&&(<><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📦 카테고리별</div><BarChart data={catStats}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📍 지역별</div><BarChart data={regionStats} color={ADMIN_C}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>🏷 나누미 / 구하미</div>{(()=>{const nan=items.filter(i=>i.postType==="nanumi").length;const gu=items.filter(i=>i.postType==="guhami").length;const tot=nan+gu||1;return(<div><div style={{display:"flex",height:20,borderRadius:10,overflow:"hidden",marginBottom:8}}><div style={{width:`${(nan/tot)*100}%`,background:ACCENT}}/><div style={{width:`${(gu/tot)*100}%`,background:"#c62828"}}/></div><div style={{display:"flex",gap:16,fontSize:12}}><span style={{color:ACCENT}}>■ 나누미 {nan}개</span><span style={{color:"#c62828"}}>■ 구하미 {gu}개</span></div></div>);})()}</div></>)}
           {adminTab==="reports"&&(()=>{
