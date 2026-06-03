@@ -503,8 +503,8 @@ export default function App(){
         if(r.id===chatId)return sum;
         return sum+(r.unreadCount?.[uid]||0);
       },0);
-      if(remaining>0)navigator.setAppBadge(remaining);
-      else navigator.clearAppBadge();
+      const p=remaining>0?navigator.setAppBadge(remaining):navigator.clearAppBadge();
+      p?.catch(()=>{});
     }
   }
 
@@ -778,8 +778,8 @@ export default function App(){
   // ── 앱 아이콘 뱃지 (App Badging API, iOS 16.4+) ──
   useEffect(()=>{
     if(!navigator.setAppBadge)return;
-    if(unreadMsgCount>0)navigator.setAppBadge(unreadMsgCount);
-    else navigator.clearAppBadge();
+    const p=unreadMsgCount>0?navigator.setAppBadge(unreadMsgCount):navigator.clearAppBadge();
+    p?.catch(()=>{});
   },[unreadMsgCount]);
 
   // 백그라운드→포그라운드 복귀 시 뱃지 재보정 (iOS PWA onSnapshot 재연결 지연 대응)
@@ -787,8 +787,8 @@ export default function App(){
     if(!navigator.setAppBadge)return;
     const onVisible=()=>{
       if(document.visibilityState!=="visible")return;
-      if(unreadMsgCount>0)navigator.setAppBadge(unreadMsgCount);
-      else navigator.clearAppBadge();
+      const p=unreadMsgCount>0?navigator.setAppBadge(unreadMsgCount):navigator.clearAppBadge();
+      p?.catch(()=>{});
     };
     document.addEventListener("visibilitychange",onVisible);
     return()=>document.removeEventListener("visibilitychange",onVisible);
