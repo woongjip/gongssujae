@@ -126,8 +126,10 @@ function MapPicker({loaded,onSelect}){
 
   useEffect(()=>{
     if(!loaded||!mapRef.current)return;
-    const center=new window.kakao.maps.LatLng(36.5,127.5);
-    const map=new window.kakao.maps.Map(mapRef.current,{center,level:13});
+    // fallback: 서울 시청. 지도가 즉시 동네 수준으로 열리게 level 4로 시작.
+    const FALLBACK_LAT=37.5663,FALLBACK_LNG=126.9779,ZOOM=4;
+    const center=new window.kakao.maps.LatLng(FALLBACK_LAT,FALLBACK_LNG);
+    const map=new window.kakao.maps.Map(mapRef.current,{center,level:ZOOM});
     map.relayout(); // Safari/PWA: paint 전 생성 시 빈 지도 방지
     let marker=null;
     window.kakao.maps.event.addListener(map,"click",(e)=>{
@@ -143,6 +145,16 @@ function MapPicker({loaded,onSelect}){
         onSelect(lat,lng,address||`${lat.toFixed(5)},${lng.toFixed(5)}`);
       });
     });
+    // 위치 권한이 있으면 사용자 동네로 이동. 실패/거부는 서울 시청 유지.
+    if('geolocation' in navigator){
+      let active=true;
+      navigator.geolocation.getCurrentPosition(
+        (pos)=>{if(active)map.setCenter(new window.kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude));},
+        ()=>{},
+        {enableHighAccuracy:false,timeout:5000,maximumAge:60000}
+      );
+      return()=>{active=false;};
+    }
   },[loaded]);
 
   if(!loaded)return(
