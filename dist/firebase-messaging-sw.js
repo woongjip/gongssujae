@@ -37,9 +37,12 @@ messaging.onBackgroundMessage((payload) => {
 
   // iOS PWA는 apns.aps.badge가 아닌 Web Badge API로만 뱃지가 설정된다.
   // Cloud Functions가 data.badge에 넣어준 정확한 개수로 뱃지를 찍는다.
+  // SW 전역에서는 navigator 대신 self.navigator 를 사용해야 iOS WebKit에서 안전하다.
   const badge = parseInt(payload.data?.badge || '0', 10);
-  if (navigator.setAppBadge) {
-    if (badge > 0) navigator.setAppBadge(badge);
-    else navigator.clearAppBadge();
+  if (self.navigator?.setAppBadge) {
+    const p = badge > 0
+      ? self.navigator.setAppBadge(badge)
+      : self.navigator.clearAppBadge();
+    p?.catch(() => {});
   }
 });

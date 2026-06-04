@@ -1192,9 +1192,9 @@ export default function App(){
           </div>
           <div style={{flex:1,minHeight:0,overflowY:"auto"}}>
             {/* 메인 사진 */}
-            <div style={{height:260,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+            <div style={{aspectRatio:"4/3",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
               {photos.length>0
-                ?<img src={photos[photoIdx]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                ?<img src={photos[photoIdx]} style={{width:"100%",height:"100%",objectFit:"contain"}} alt=""/>
                 :<span style={{fontSize:72}}>{(selItem.category?.[0]&&CAT_ICON[selItem.category[0]])||"📦"}</span>}
             </div>
             {/* 썸네일 줄 */}
@@ -1659,7 +1659,7 @@ export default function App(){
       {/* 사진 크롭 모달 */}
       {cropSrc&&(<div style={{position:"absolute",inset:0,background:"#000",zIndex:300,display:"flex",flexDirection:"column"}}>
         <div style={{flex:1,position:"relative"}}>
-          <Cropper image={cropSrc} crop={cropPos} zoom={cropZoom} aspect={1} onCropChange={setCropPos} onZoomChange={setCropZoom} onCropComplete={onCropComplete} style={{containerStyle:{borderRadius:0}}}/>
+          <Cropper image={cropSrc} crop={cropPos} zoom={cropZoom} aspect={4/3} onCropChange={setCropPos} onZoomChange={setCropZoom} onCropComplete={onCropComplete} style={{containerStyle:{borderRadius:0}}}/>
         </div>
         <div style={{padding:"12px 16px 8px",background:"#111"}}>
           <input type="range" min={1} max={3} step={0.01} value={cropZoom} onChange={e=>setCropZoom(Number(e.target.value))} style={{width:"100%",accentColor:ACCENT}}/>
