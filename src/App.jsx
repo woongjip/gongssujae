@@ -343,23 +343,21 @@ export default function App(){
     return()=>unsub();
   },[currentUser]);
 
-  // ── Firestore items ──
+  // ── Firestore items — 비로그인도 구독 (규칙: read: true) ──
   useEffect(()=>{
-    if(!currentUser||!userProfile)return;
     const unsub=onSnapshot(query(collection(db,"items"),orderBy("createdAt","desc")),snap=>{
       setItems(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
     return()=>unsub();
-  },[currentUser,userProfile]);
+  },[]);
 
-  // ── Firestore jobs ──
+  // ── Firestore jobs — 비로그인도 구독 (규칙: read: true) ──
   useEffect(()=>{
-    if(!currentUser||!userProfile)return;
     const unsub=onSnapshot(query(collection(db,"jobs"),orderBy("createdAt","desc")),snap=>{
       setJobs(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
     return()=>unsub();
-  },[currentUser,userProfile]);
+  },[]);
 
   // ── Chat rooms ──
   useEffect(()=>{
@@ -1015,14 +1013,7 @@ export default function App(){
       );
     }
 
-    if(authStep==="splash")return(
-      <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,boxSizing:"border-box"}}>
-        <img src="/gongssujae_logo_full.png" alt="공쓰재" style={{width:"100%",maxWidth:260,marginBottom:32}}/>
-        <div style={{fontSize:13,color:"#999",textAlign:"center",lineHeight:1.7,marginBottom:48}}>공연에 쓰고 남은 물건과 일자리를<br/>나누는 공연인들의 플랫폼</div>
-        <button onClick={()=>{setAuthStep("register");setAuthError("");}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:12}}>시작하기</button>
-        <button onClick={()=>{setAuthStep("login");setAuthError("");}} style={{width:"100%",height:50,borderRadius:14,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:15,fontWeight:500,cursor:"pointer"}}>이미 계정이 있어요</button>
-      </div>
-    );
+    // authStep==="splash": 재방문 비로그인 → fall-through to 메인 앱 (둘러보기 모드)
 
     if(authStep==="login")return wrap(<>
       {backBtn("splash")}
@@ -1094,10 +1085,10 @@ export default function App(){
       </div>
     </>);
 
-    return null;
+    // 위 어떤 authStep에도 해당 안 되면(= splash) 메인 앱으로 fall-through
   }
 
-  // ── Main App ──
+  // ── Main App (로그인 사용자 + 비로그인 둘러보기) ──
   return(
     <div className="app-shell" style={{...shellStyle,display:"flex",flexDirection:"column"}} onClick={()=>moreMenu&&setMoreMenu(null)}>
 
