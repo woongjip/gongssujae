@@ -197,7 +197,8 @@ export default function App(){
   const [currentUser,setCurrentUser]=useState(null);
   const [userProfile,setUserProfile]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
-  const [authStep,setAuthStep]=useState(localStorage.getItem("welcomed")?"splash":"welcome");
+  const [authStep,setAuthStep]=useState("splash"); // 첫 방문도 바로 메인 앱으로
+  const [loginPromptMsg,setLoginPromptMsg]=useState(null); // 비로그인 액션 안내 모달
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
   const [confirmPw,setConfirmPw]=useState("");
@@ -493,6 +494,9 @@ export default function App(){
 
   function goDetail(item){scrollPos.current=listRef.current?.scrollTop||0;setSelItem(item);go("detail");window.location.hash=`#/item/${item.id}`;}
 
+  // 비로그인 시 모달 표시 후 false 반환, 로그인 시 true 반환
+  function requireLogin(msg){if(currentUser)return true;setLoginPromptMsg(msg);return false;}
+
   async function handleHashNav(hash){
     const p=parseHash(hash);if(!p)return;
     const showNotFound=()=>{window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");};
@@ -514,7 +518,7 @@ export default function App(){
   screenRef.current=screen;
 
   async function openChat(itemId,itemTitle,sellerId){
-    if(!currentUser)return;
+    if(!requireLogin("채팅하려면 로그인이 필요해요"))return;
     if(sellerId===currentUser.uid){alert("본인 게시글에는 채팅할 수 없습니다");return;}
     if(typeof Notification!=="undefined"&&Notification.permission==="default"&&!localStorage.getItem('pushDismissed')){
       setShowPushModal(true);
@@ -580,7 +584,7 @@ export default function App(){
 
   async function toggleLike(itemId,e){
     e?.stopPropagation();
-    if(!currentUser)return;
+    if(!requireLogin("찜하려면 로그인이 필요해요"))return;
     const item=items.find(i=>i.id===itemId);if(!item)return;
     const isLiked=(item.likedBy||[]).includes(currentUser.uid);
     try{
@@ -1636,6 +1640,17 @@ export default function App(){
       </div>)}
 
       {/* 푸시 알림 권한 요청 모달 */}
+      {/* 비로그인 행동 차단 — 로그인 안내 모달 */}
+      {loginPromptMsg&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setLoginPromptMsg(null)}>
+        <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"28px 20px 36px",width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:28,textAlign:"center",marginBottom:10}}>🔐</div>
+          <div style={{fontSize:17,fontWeight:700,textAlign:"center",marginBottom:8}}>로그인이 필요해요</div>
+          <div style={{fontSize:13,color:"#888",textAlign:"center",lineHeight:1.7,marginBottom:24}}>{loginPromptMsg}</div>
+          <button onClick={()=>{setLoginPromptMsg(null);setAuthStep("login");setAuthError("");}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",marginBottom:10}}>로그인하기</button>
+          <button onClick={()=>setLoginPromptMsg(null)} style={{width:"100%",height:44,borderRadius:14,border:"none",background:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>닫기</button>
+        </div>
+      </div>)}
+
       {showPushModal&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setShowPushModal(false)}>
         <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"28px 20px 36px",width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
           <div style={{fontSize:18,textAlign:"center",marginBottom:8}}>🔔</div>
@@ -1649,7 +1664,7 @@ export default function App(){
       {/* 하단 네비게이션 */}
       {screen!=="admin"&&(<div style={{position:"absolute",bottom:0,left:0,right:0,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>
         <button style={tb("home")} onClick={goHome}><i className="ti ti-home" style={tic("home")}/>홈</button>
-        <button style={tb("post")} onClick={()=>{setEditItem(null);setEditJob(null);setForm(emptyForm);setJform({...emptyJform,org:userProfile?.affiliation||""});setPostMode(mainTab==="jobs"?"job":"item");go("post","post");}}>
+        <button style={tb("post")} onClick={()=>{if(!requireLogin("글을 올리려면 로그인이 필요해요"))return;setEditItem(null);setEditJob(null);setForm(emptyForm);setJform({...emptyJform,org:userProfile?.affiliation||""});setPostMode(mainTab==="jobs"?"job":"item");go("post","post");}}>
           <div style={{width:44,height:44,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-24}}><i className="ti ti-plus" style={{fontSize:22,color:"#fff"}}/></div>
           <span style={{marginTop:2}}>올리기</span>
         </button>
