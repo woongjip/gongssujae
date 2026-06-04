@@ -614,25 +614,52 @@ export default function App(){
     if(!currentUser)return;
     const derivedPostType=form.listingMode==="guhami"?"guhami":"nanumi";
     const derivedPrice=form.listingMode==="sale"?(parseInt(form.price)||0):0;
-    const {listingMode,...formData}=form;
+    // contact·safeNum을 분리해서 itemPrivate에만 저장
+    const {listingMode,contact,safeNum,...formData}=form;
+    const privateData={contact:contact||"",safeNum:!!safeNum,sellerId:currentUser.uid};
     const data={...formData,postType:derivedPostType,price:derivedPrice,showTag:formData.showTag?.trim()||"",seller:userProfile?.affiliation||userProfile?.name||"익명",sellerId:currentUser.uid,si:(userProfile?.name||userProfile?.affiliation||"나")[0],likedBy:editItem?.likedBy||[]};
     if(editItem){
       const photos=await uploadPhotosToStorage(data.photos,editItem.id);
       const updated={...data,photos};
       await updateDoc(doc(db,"items",editItem.id),{...updated,createdAt:editItem.createdAt});
+      // itemPrivate 저장 실패 시 에러 표시 (items 수정은 이미 완료됐으나 연락처 유실 방지)
+      try{
+        await setDoc(doc(db,"itemPrivate",editItem.id),privateData,{merge:true});
+      }catch(e){
+        console.error("[submitItem] itemPrivate 수정 실패:",e);
+        showFormError("연락처 저장에 실패했어요. 다시 시도해주세요.");
+        return;
+      }
       setSelItem({...updated,id:editItem.id});
     }else{
       const newRef=doc(collection(db,"items"));
       const photos=await uploadPhotosToStorage(data.photos,newRef.id);
+      // items 먼저 저장
       await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});
+      // itemPrivate 저장 실패 시 items 롤백
+      try{
+        await setDoc(doc(db,"itemPrivate",newRef.id),privateData);
+      }catch(e){
+        console.error("[submitItem] itemPrivate 저장 실패, items 롤백:",e);
+        try{await deleteDoc(doc(db,"items",newRef.id));}catch(_){}
+        showFormError("연락처 저장에 실패했어요. 다시 시도해주세요.");
+        return;
+      }
     }
     setEditItem(null);setForm(emptyForm);setPosted(true);
     setTimeout(()=>{setPosted(false);go(editItem?"detail":"home",editItem?undefined:"home");},1200);
   }
 
-  function startEdit(item){
+  async function startEdit(item){
     const listingMode=item.postType==="guhami"?"guhami":(item.price>0?"sale":"nanumi");
-    setForm({title:item.title,category:item.category||[],itemName:item.itemName||"",price:item.price?.toString()||"",desc:item.desc||"",region:item.region||"",contact:item.contact||"",safeNum:item.safeNum||false,tradePlace:item.tradePlace||"",tradeLat:item.tradeLat||null,tradeLng:item.tradeLng||null,photos:item.photos||[],status:item.status||"selling",postType:item.postType||"nanumi",showTag:item.showTag||"",showEndDate:item.showEndDate||"",listingMode});
+    // itemPrivate에서 연락처 읽기, 없으면(마이그레이션 전 구글 글) item에서 fallback
+    let contact=item.contact||"";
+    let safeNum=item.safeNum||false;
+    try{
+      const privSnap=await getDoc(doc(db,"itemPrivate",item.id));
+      if(privSnap.exists()){contact=privSnap.data().contact||"";safeNum=privSnap.data().safeNum||false;}
+    }catch(e){console.log("[startEdit] itemPrivate load:",e);}
+    setForm({title:item.title,category:item.category||[],itemName:item.itemName||"",price:item.price?.toString()||"",desc:item.desc||"",region:item.region||"",contact,safeNum,tradePlace:item.tradePlace||"",tradeLat:item.tradeLat||null,tradeLng:item.tradeLng||null,photos:item.photos||[],status:item.status||"selling",postType:item.postType||"nanumi",showTag:item.showTag||"",showEndDate:item.showEndDate||"",listingMode});
     setEditItem(item);setPostMode("item");go("post","post");
   }
 
