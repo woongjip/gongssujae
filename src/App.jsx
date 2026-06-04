@@ -1668,14 +1668,14 @@ export default function App(){
           <div style={{width:44,height:44,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-24}}><i className="ti ti-plus" style={{fontSize:22,color:"#fff"}}/></div>
           <span style={{marginTop:2}}>올리기</span>
         </button>
-        <button style={tb("chatlist")} onClick={()=>go("chatlist","chatlist")}>
+        <button style={tb("chatlist")} onClick={()=>{if(!requireLogin("채팅을 보려면 로그인이 필요해요"))return;go("chatlist","chatlist");}}>
           <div style={{position:"relative",display:"inline-flex"}}>
             <i className="ti ti-message-circle" style={tic("chatlist")}/>
             {unreadMsgCount>0&&<span style={{position:"absolute",top:-4,right:-6,background:"#e25",color:"#fff",borderRadius:10,fontSize:9,padding:"0 4px",lineHeight:"16px",minWidth:14,textAlign:"center",fontWeight:600}}>{unreadMsgCount}</span>}
           </div>
           채팅
         </button>
-        <button style={tb("mypage")} onClick={()=>go("mypage","mypage")}><i className="ti ti-user" style={tic("mypage")}/>MY</button>
+        <button style={tb("mypage")} onClick={()=>{if(!requireLogin("내 정보를 보려면 로그인이 필요해요"))return;go("mypage","mypage");}}><i className="ti ti-user" style={tic("mypage")}/>MY</button>
       </div>)}
 
       {/* 전체화면 지도 */}
