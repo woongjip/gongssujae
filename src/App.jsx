@@ -107,15 +107,37 @@ async function resizeImage(file){
   });
 }
 
-async function getCroppedImg(imageSrc,pixelCrop){
+async function getCroppedImg(imageSrc,pixelCrop,rotation=0){
   return new Promise((resolve,reject)=>{
     const img=new Image();
     img.onload=()=>{
-      const canvas=document.createElement("canvas");
-      canvas.width=600;canvas.height=600;
-      const ctx=canvas.getContext("2d");
-      ctx.drawImage(img,pixelCrop.x,pixelCrop.y,pixelCrop.width,pixelCrop.height,0,0,600,600);
-      resolve(canvas.toDataURL("image/jpeg",0.65));
+      if(rotation===0){
+        const canvas=document.createElement("canvas");
+        canvas.width=800;canvas.height=600;
+        canvas.getContext("2d").drawImage(img,pixelCrop.x,pixelCrop.y,pixelCrop.width,pixelCrop.height,0,0,800,600);
+        resolve(canvas.toDataURL("image/jpeg",0.65));
+        return;
+      }
+      // 회전 적용: safe-area 캔버스에 회전 후 crop
+      const maxSide=Math.max(img.width,img.height);
+      const safe=Math.ceil(2*((maxSide/2)*Math.sqrt(2)));
+      const c1=document.createElement("canvas");
+      c1.width=safe;c1.height=safe;
+      const x1=c1.getContext("2d");
+      x1.translate(safe/2,safe/2);
+      x1.rotate((rotation*Math.PI)/180);
+      x1.translate(-img.width/2,-img.height/2);
+      x1.drawImage(img,0,0);
+      const imgData=x1.getImageData(0,0,safe,safe);
+      const c2=document.createElement("canvas");
+      c2.width=pixelCrop.width;c2.height=pixelCrop.height;
+      c2.getContext("2d").putImageData(imgData,
+        Math.round(0-safe/2+img.width/2-pixelCrop.x),
+        Math.round(0-safe/2+img.height/2-pixelCrop.y));
+      const out=document.createElement("canvas");
+      out.width=800;out.height=600;
+      out.getContext("2d").drawImage(c2,0,0,800,600);
+      resolve(out.toDataURL("image/jpeg",0.65));
     };
     img.onerror=reject;
     img.src=imageSrc;
@@ -246,6 +268,7 @@ export default function App(){
   const [cropPx,setCropPx]=useState({x:0,y:0,width:0,height:0});
   const [cropZoom,setCropZoom]=useState(1);
   const [cropPos,setCropPos]=useState({x:0,y:0});
+  const [cropRotation,setCropRotation]=useState(0);
 
   const listRef=useRef(null);
   const scrollPos=useRef(0);
@@ -664,23 +687,23 @@ export default function App(){
     Promise.all(readers).then(srcs=>{
       setCropQueue(srcs);
       setCropSrc(srcs[0]);
-      setCropZoom(1);setCropPos({x:0,y:0});
+      setCropZoom(1);setCropPos({x:0,y:0});setCropRotation(0);
     });
   }
   async function handleCropConfirm(){
     try{
-      const dataUrl=await getCroppedImg(cropSrc,cropPx);
+      const dataUrl=await getCroppedImg(cropSrc,cropPx,cropRotation);
       setForm(p=>({...p,photos:[...p.photos,dataUrl]}));
     }catch(e){console.error("[crop]",e);}
     const remaining=cropQueue.slice(1);
     setCropQueue(remaining);
-    if(remaining.length>0){setCropSrc(remaining[0]);setCropZoom(1);setCropPos({x:0,y:0});}
+    if(remaining.length>0){setCropSrc(remaining[0]);setCropZoom(1);setCropPos({x:0,y:0});setCropRotation(0);}
     else setCropSrc(null);
   }
   function handleCropCancel(){
     const remaining=cropQueue.slice(1);
     setCropQueue(remaining);
-    if(remaining.length>0){setCropSrc(remaining[0]);setCropZoom(1);setCropPos({x:0,y:0});}
+    if(remaining.length>0){setCropSrc(remaining[0]);setCropZoom(1);setCropPos({x:0,y:0});setCropRotation(0);}
     else setCropSrc(null);
   }
   const onCropComplete=useCallback((_,px)=>setCropPx(px),[]);
@@ -1659,10 +1682,12 @@ export default function App(){
       {/* 사진 크롭 모달 */}
       {cropSrc&&(<div style={{position:"absolute",inset:0,background:"#000",zIndex:300,display:"flex",flexDirection:"column"}}>
         <div style={{flex:1,position:"relative"}}>
-          <Cropper image={cropSrc} crop={cropPos} zoom={cropZoom} aspect={4/3} onCropChange={setCropPos} onZoomChange={setCropZoom} onCropComplete={onCropComplete} style={{containerStyle:{borderRadius:0}}}/>
+          <Cropper image={cropSrc} crop={cropPos} zoom={cropZoom} rotation={cropRotation} aspect={4/3} onCropChange={setCropPos} onZoomChange={setCropZoom} onCropComplete={onCropComplete} style={{containerStyle:{borderRadius:0}}}/>
         </div>
-        <div style={{padding:"12px 16px 8px",background:"#111"}}>
-          <input type="range" min={1} max={3} step={0.01} value={cropZoom} onChange={e=>setCropZoom(Number(e.target.value))} style={{width:"100%",accentColor:ACCENT}}/>
+        <div style={{padding:"10px 16px 4px",background:"#111",display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>setCropRotation(r=>(r-90+360)%360)} style={{width:40,height:40,borderRadius:10,border:"1px solid #444",background:"transparent",color:"#ccc",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-rotate-clockwise-2" style={{transform:"scaleX(-1)"}}/></button>
+          <input type="range" min={1} max={3} step={0.01} value={cropZoom} onChange={e=>setCropZoom(Number(e.target.value))} style={{flex:1,accentColor:ACCENT}}/>
+          <button onClick={()=>setCropRotation(r=>(r+90)%360)} style={{width:40,height:40,borderRadius:10,border:"1px solid #444",background:"transparent",color:"#ccc",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-rotate-clockwise-2"/></button>
         </div>
         <div style={{display:"flex",gap:8,padding:"8px 16px",paddingBottom:"calc(16px + env(safe-area-inset-bottom,0px))",background:"#111"}}>
           <button onClick={handleCropCancel} style={{flex:1,height:48,borderRadius:12,border:"1px solid #444",background:"transparent",color:"#ccc",fontSize:15,cursor:"pointer"}}>취소</button>
