@@ -1081,6 +1081,11 @@ export default function App(){
   const [notFoundToast,setNotFoundToast]=useState(false);
   const [moreMenu,setMoreMenu]=useState(null); // "item"|"job"|null
   const sharePost=(title,text,shareUrl)=>{const url=shareUrl||"https://twr.or.kr";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
+  const copyLink=(url)=>{
+    const ok=()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);};
+    const fallback=()=>{try{const el=document.createElement("textarea");el.value=url;el.style.cssText="position:fixed;top:-9999px;opacity:0";document.body.appendChild(el);el.focus();el.select();document.execCommand("copy");el.remove();}catch(_){}ok();};
+    try{navigator.clipboard.writeText(url).then(ok).catch(fallback);}catch(_){fallback();}
+  };
   const shareKakao=(type,post)=>{
     if(!window.Kakao?.Share)return;
     const url=`https://twr.or.kr/#/${type}/${post.id}`;
@@ -1347,6 +1352,7 @@ export default function App(){
             <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goDetailBack} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
               {window.Kakao?.Share&&<button onClick={()=>shareKakao("item",selItem)} style={{background:"#FEE500",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",color:"#3C1E1E",letterSpacing:-0.3}}>카톡</button>}
+              <button onClick={()=>copyLink(`https://twr.or.kr/#/item/${selItem.id}`)} style={{background:LIGHT,border:`1px solid ${ACCENT}`,borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer",color:ACCENT,letterSpacing:-0.3}}>링크 복사</button>
               <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`,`https://twr.or.kr/#/item/${selItem.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="item"?null:"item")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="item"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
@@ -1468,6 +1474,7 @@ export default function App(){
             </div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
               {window.Kakao?.Share&&<button onClick={()=>shareKakao("job",selJob)} style={{background:"#FEE500",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",color:"#3C1E1E",letterSpacing:-0.3}}>카톡</button>}
+              <button onClick={()=>copyLink(`https://twr.or.kr/#/job/${selJob.id}`)} style={{background:LIGHT,border:`1px solid ${ACCENT}`,borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer",color:ACCENT,letterSpacing:-0.3}}>링크 복사</button>
               <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`,`https://twr.or.kr/#/job/${selJob.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="job"?null:"job")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="job"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
