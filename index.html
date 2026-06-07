@@ -26,16 +26,27 @@
     </style>
     <!-- 카카오 SDK보다 먼저 실행: hash 보존 + 카카오 공유 쿼리 파라미터(?p=) 처리 -->
     <script>
-      // 카카오 공유 링크는 ?p=item/{id} 쿼리 파라미터로 들어옴 (HTTP 리다이렉트 시 hash 소실 우회)
-      var qm = window.location.search.match(/[?&]p=(item|job)\/([^&]+)/);
-      if (qm) {
+      // 카카오 공유 링크 진입 처리 (카카오 인앱 브라우저는 hash/query 모두 소실 가능)
+      // 우선순위: /open/type/id path > ?p=type/id query > #/type/id hash
+      var pathM = window.location.pathname.match(/^\/open\/(item|job)\/([^/]+)$/);
+      var qm    = window.location.search.match(/[?&]p=(item|job)\/([^&]+)/);
+      var from  = 'hash';
+      if (pathM) {
+        // path 방식: 가장 안정적 (hash/query 소실 없음)
+        var nh = '#/' + pathM[1] + '/' + pathM[2];
+        window.__entryHash = nh;
+        window.history.replaceState(null, '', '/' + nh);
+        from = '/open/ path';
+      } else if (qm) {
+        // query 방식: fallback (이전에 공유된 ?p= 링크 호환)
         var nh = '#/' + qm[1] + '/' + qm[2];
         window.__entryHash = nh;
         window.history.replaceState(null, '', window.location.pathname + nh);
+        from = '?p= query';
       } else {
         window.__entryHash = window.location.hash;
       }
-      console.log('[공쓰재] __entryHash captured:', window.__entryHash, '| from:', qm ? '?p= query' : 'hash');
+      console.log('[공쓰재] __entryHash captured:', window.__entryHash, '| from:', from);
     </script>
     <!-- hashchange 감시 -->
     <script>window.addEventListener('hashchange', function(e){ console.warn('[공쓰재] hashchange! old:', e.oldURL.split('#')[1]||'(empty)', '→ new:', window.location.hash||'(empty)'); console.trace('[공쓰재] hashchange caller'); });</script>

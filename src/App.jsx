@@ -1088,9 +1088,9 @@ export default function App(){
   };
   const shareKakao=(type,post)=>{
     if(!window.Kakao?.Share)return;
-    // 카카오 링크는 HTTP 리다이렉트를 거치므로 hash(#)가 소실됨 → 쿼리 파라미터 방식 사용
-    // 앱 진입 시 index.html에서 ?p= 를 #/type/id 로 변환해 처리
-    const url=`https://twr.or.kr/?p=${type}/${post.id}`;
+    // 카카오 인앱 브라우저는 hash도 query도 소실 → path 방식으로 전달
+    // Vercel rewrite: /open/item/{id} → index.html → 앱에서 #/item/{id}로 변환
+    const url=`https://twr.or.kr/open/${type}/${post.id}`;
     console.log('[공쓰재] shareKakao URL:', url);
     const desc=type==="item"
       ?[post.postType==="guhami"?"구함":post.price?`${Number(post.price).toLocaleString()}원`:"나눔",post.region].filter(Boolean).join(" · ")
