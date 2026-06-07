@@ -664,9 +664,12 @@ export default function App(){
     const privateData={contact:contact||"",safeNum:!!safeNum,sellerId:currentUser.uid};
     const data={...formData,postType:derivedPostType,price:derivedPrice,showTag:formData.showTag?.trim()||"",seller:userProfile?.affiliation||userProfile?.name||"익명",sellerId:currentUser.uid,si:(userProfile?.name||userProfile?.affiliation||"나")[0],likedBy:editItem?.likedBy||[]};
     if(editItem){
-      const photos=await uploadPhotosToStorage(data.photos,editItem.id);
+      let photos;
+      try{photos=await uploadPhotosToStorage(data.photos,editItem.id);}
+      catch(e){console.error("[submitItem] 사진 업로드 실패:",e);showFormError("사진 업로드에 실패했어요. 다시 시도해주세요.");return;}
       const updated={...data,photos};
-      await updateDoc(doc(db,"items",editItem.id),{...updated,createdAt:editItem.createdAt});
+      try{await updateDoc(doc(db,"items",editItem.id),{...updated,createdAt:editItem.createdAt});}
+      catch(e){console.error("[submitItem] items 수정 실패:",e);showFormError("저장에 실패했어요. 다시 시도해주세요.");return;}
       // itemPrivate 저장 실패 시 에러 표시 (items 수정은 이미 완료됐으나 연락처 유실 방지)
       try{
         await setDoc(doc(db,"itemPrivate",editItem.id),privateData,{merge:true});
@@ -678,9 +681,12 @@ export default function App(){
       setSelItem({...updated,id:editItem.id});
     }else{
       const newRef=doc(collection(db,"items"));
-      const photos=await uploadPhotosToStorage(data.photos,newRef.id);
+      let photos;
+      try{photos=await uploadPhotosToStorage(data.photos,newRef.id);}
+      catch(e){console.error("[submitItem] 사진 업로드 실패:",e);showFormError("사진 업로드에 실패했어요. 다시 시도해주세요.");return;}
       // items 먼저 저장
-      await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});
+      try{await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});}
+      catch(e){console.error("[submitItem] items 저장 실패:",e);showFormError("저장에 실패했어요. 다시 시도해주세요.");return;}
       // itemPrivate 저장 실패 시 items 롤백
       try{
         await setDoc(doc(db,"itemPrivate",newRef.id),privateData);
@@ -742,8 +748,14 @@ export default function App(){
     if(!currentUser)return;
     const wasEditing=!!editJob;
     const data={...jform,org:jform.org||userProfile?.affiliation||userProfile?.name||"나",icon:editJob?.icon||"📋",sellerId:currentUser.uid};
-    if(editJob){await updateDoc(doc(db,"jobs",editJob.id),{...data,createdAt:editJob.createdAt});setSelJob({...data,id:editJob.id});}
-    else{await addDoc(collection(db,"jobs"),{...data,createdAt:serverTimestamp()});}
+    try{
+      if(editJob){await updateDoc(doc(db,"jobs",editJob.id),{...data,createdAt:editJob.createdAt});setSelJob({...data,id:editJob.id});}
+      else{await addDoc(collection(db,"jobs"),{...data,createdAt:serverTimestamp()});}
+    }catch(e){
+      console.error("[submitJob]",e);
+      showFormError("저장에 실패했어요. 다시 시도해주세요.");
+      return;
+    }
     setEditJob(null);setJform(emptyJform);setPosted(true);
     setTimeout(()=>{setPosted(false);if(wasEditing){go("jobdetail");}else{setMainTab("jobs");goHome();}},1200);
   }
@@ -1569,7 +1581,7 @@ export default function App(){
               <div style={{fontSize:11,color:"#999",marginTop:7,paddingLeft:2}}>📬 인증 메일이 스팸함(정크함)에 있을 수 있어요. 메일이 안 보이면 확인해주세요.</div>
               {emailVerifSent&&<div style={{fontSize:11,color:"#e65100",textAlign:"center",marginTop:6,fontWeight:500}}>인증 메일을 재발송했어요. 메일함을 확인해주세요</div>}
             </div>}
-            {[["알림 설정","ti-bell"],["거래 내역","ti-repeat"]].map(([l,ic])=>(<div key={l} onClick={()=>{if(l==="알림 설정")go("notify","");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className={`ti ${ic}`} style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>{l}</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>))}
+            <div onClick={()=>go("notify","")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className="ti ti-bell" style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>알림 설정</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>
             <div onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:10,padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><i className="ti ti-logout" style={{fontSize:18,color:"#e25"}}/><span style={{fontSize:14,color:"#e25"}}>로그아웃</span></div>
             {isAdmin&&<div onClick={()=>go("admin")} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer"}}><span style={{fontSize:12,color:ADMIN_C,fontWeight:500}}>🔐 관리자 패널</span></div>}
           </>)}
