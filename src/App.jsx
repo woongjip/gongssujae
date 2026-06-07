@@ -37,6 +37,7 @@ function fmtMsgTime(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleT
 function fmtDateLabel(ts){const d=ts?.toDate?.();if(!d)return"";return d.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});}
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||('ontouchstart' in window);
 const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isKakaoInApp=/KAKAOTALK/i.test(navigator.userAgent);
 const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const shellStyle=isMobile
   ?{width:"100%",height:"100dvh",fontFamily:"sans-serif",background:BG,position:"relative",overflow:"hidden"}
@@ -1776,29 +1777,49 @@ export default function App(){
         <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px 36px",width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
           <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>📲 홈 화면에 추가하기</div>
           <div style={{fontSize:13,color:"#888",marginBottom:20}}>앱 설치 없이 앱처럼 사용할 수 있어요</div>
-          {isIOS?(<>
-            <div style={{padding:"14px",background:LIGHT,borderRadius:14,marginBottom:12}}>
-              <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:6}}>iPhone / iPad (사파리)</div>
-              <div style={{fontSize:13,color:"#444",lineHeight:1.9}}>
-                1. 하단 공유 버튼 <strong>□↑</strong> 탭<br/>
-                2. <strong>'홈 화면에 추가'</strong> 선택<br/>
-                3. 오른쪽 위 <strong>'추가'</strong> 탭
+          {isKakaoInApp?(
+            /* 카카오 인앱 브라우저 — iOS/Android 공통: 외부 브라우저로 열어야 홈화면 추가 가능 */
+            <div style={{padding:"16px",background:"#fff8e1",borderRadius:14,marginBottom:12,border:"1px solid #ffe082"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#e65100",marginBottom:8}}>⚠️ 카카오톡 내에서는 추가가 불가능해요</div>
+              <div style={{fontSize:13,color:"#555",lineHeight:1.9}}>
+                {isIOS?(
+                  <>오른쪽 하단 <strong>···</strong> 메뉴 →<br/><strong>'Safari로 열기'</strong>를 선택해주세요.<br/>Safari에서 홈 화면에 추가할 수 있어요.</>
+                ):(
+                  <>오른쪽 상단 <strong>···</strong> 메뉴 →<br/><strong>'다른 브라우저로 열기'</strong>를 선택해주세요.<br/>Chrome에서 홈 화면에 추가할 수 있어요.</>
+                )}
               </div>
+              <div style={{marginTop:12,padding:"8px 12px",background:"#f5f5f5",borderRadius:8,fontSize:12,color:"#888",fontFamily:"monospace"}}>twr.or.kr</div>
             </div>
-            <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>사파리 앱에서만 홈 화면 추가가 가능해요</div>
-          </>):deferredPrompt?(<>
-            <div style={{fontSize:13,color:"#555",marginBottom:16,lineHeight:1.6}}>아래 버튼을 누르면 홈 화면에 바로 추가돼요.</div>
-            <button onClick={async()=>{deferredPrompt.prompt();const r=await deferredPrompt.userChoice;if(r.outcome==="accepted"){localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}setDeferredPrompt(null);setShowPWAModal(false);}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer"}}>홈 화면에 추가하기</button>
-          </>):(<>
+          ):isIOS?(
+            /* iOS Safari */
+            <>
+              <div style={{padding:"14px",background:LIGHT,borderRadius:14,marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:8}}>iPhone / iPad (Safari)</div>
+                <div style={{fontSize:13,color:"#444",lineHeight:2}}>
+                  1. 하단 가운데 <strong>공유 버튼 <span style={{fontSize:16}}>⎙</span></strong> 탭<br/>
+                  2. 스크롤해서 <strong>'홈 화면에 추가'</strong> 선택<br/>
+                  3. 오른쪽 위 <strong>'추가'</strong> 탭
+                </div>
+              </div>
+              <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>Safari 브라우저에서만 홈 화면 추가가 가능해요</div>
+            </>
+          ):deferredPrompt?(
+            /* Android — 설치 프롬프트 있음 */
+            <>
+              <div style={{fontSize:13,color:"#555",marginBottom:16,lineHeight:1.6}}>아래 버튼을 누르면 홈 화면에 바로 추가돼요.</div>
+              <button onClick={async()=>{deferredPrompt.prompt();const r=await deferredPrompt.userChoice;if(r.outcome==="accepted"){localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}setDeferredPrompt(null);setShowPWAModal(false);}} style={{width:"100%",height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer"}}>홈 화면에 추가하기</button>
+            </>
+          ):(
+            /* Android Chrome — 수동 */
             <div style={{padding:"14px",background:LIGHT,borderRadius:14,marginBottom:12}}>
-              <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:6}}>Android (크롬)</div>
-              <div style={{fontSize:13,color:"#444",lineHeight:1.9}}>
+              <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:8}}>Android (Chrome)</div>
+              <div style={{fontSize:13,color:"#444",lineHeight:2}}>
                 1. 오른쪽 위 <strong>⋮ 메뉴</strong> 탭<br/>
                 2. <strong>'홈 화면에 추가'</strong> 선택<br/>
                 3. <strong>'추가'</strong> 탭
               </div>
             </div>
-          </>)}
+          )}
           <button onClick={()=>{localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);setShowPWAModal(false);}} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:14,border:"none",background:"#f5f5f5",color:"#999",fontSize:13,cursor:"pointer"}}>다시 보지 않기</button>
         </div>
       </div>)}
