@@ -312,15 +312,32 @@ export default function App(){
             const userData={...snap.data()};
             const admin=userData.isAdmin===true;
             setIsAdmin(admin);
-            // phone은 userPrivate에서 로드 (또는 users 문서에서 마이그레이션)
+            // 민감 필드는 userPrivate에서 로드, 구 계정은 자동 마이그레이션
             try{
               const privSnap=await getDoc(doc(db,"userPrivate",user.uid));
-              if(privSnap.exists()){
-                userData.phone=privSnap.data().phone||"";
-              }else if(userData.phone){
-                // 기존 계정 마이그레이션: users → userPrivate
-                await setDoc(doc(db,"userPrivate",user.uid),{phone:userData.phone});
-                await updateDoc(doc(db,"users",user.uid),{phone:deleteField()});
+              const privData=privSnap.exists()?privSnap.data():{};
+              // userPrivate에서 민감 필드 병합
+              userData.phone=privData.phone||"";
+              userData.email=privData.email||user.email||"";
+              userData.address=privData.address||"";
+              userData.interests=privData.interests||[];
+              userData.temp=privData.temp??36.5;
+              userData.preferredRegion=privData.preferredRegion||"";
+              // 구 계정 마이그레이션: users에 남아있는 민감 필드 → userPrivate으로 이동
+              const PRIV_KEYS=["phone","email","address","interests","temp","preferredRegion"];
+              const toPrivate={},toDel={};
+              for(const k of PRIV_KEYS){
+                if(privData[k]==null){
+                  const val=k==="email"?(snap.data()[k]||user.email):snap.data()[k];
+                  if(val!=null&&val!==""&&!(Array.isArray(val)&&val.length===0)){
+                    toPrivate[k]=val;
+                    if(snap.data()[k]!=null)toDel[k]=deleteField();
+                  }
+                }
+              }
+              if(Object.keys(toPrivate).length>0){
+                await setDoc(doc(db,"userPrivate",user.uid),toPrivate,{merge:true});
+                if(Object.keys(toDel).length>0)await updateDoc(doc(db,"users",user.uid),toDel);
               }
             }catch(e){console.log("userPrivate load:",e);}
             setUserProfile(userData);
@@ -464,11 +481,14 @@ export default function App(){
     setAuthError("");setAuthBusy(true);
     try{
       const cred=await createUserWithEmailAndPassword(auth,email,password);
-      const{phone,...publicProf}=regProf;
-      const profileData={...publicProf,email,temp:36.5,isAdmin:false,status:"active",createdAt:serverTimestamp()};
-      setUserProfile({...profileData,phone}); // optimistic
-      await setDoc(doc(db,"users",cred.user.uid),profileData);
-      await setDoc(doc(db,"userPrivate",cred.user.uid),{phone});
+      const{phone,address,interests,...publicProf}=regProf;
+      // users: 공개 필드만 (판매자 카드에 표시되는 것)
+      const publicData={name:publicProf.name,affiliation:publicProf.affiliation,accountType:publicProf.accountType,isAdmin:false,status:"active",createdAt:serverTimestamp()};
+      // userPrivate: 민감 필드 (본인·어드민만 읽기 가능)
+      const privateData={phone,address:address||"",interests:interests||[],email,temp:36.5};
+      setUserProfile({...publicData,...privateData}); // optimistic
+      await setDoc(doc(db,"users",cred.user.uid),publicData);
+      await setDoc(doc(db,"userPrivate",cred.user.uid),privateData);
       try{await sendEmailVerification(cred.user);}catch(e){console.log("email verif:",e);}
       if(typeof Notification!=="undefined"&&Notification.permission==="default"&&!localStorage.getItem('pushDismissed')){
         setShowPushModal(true);
@@ -879,9 +899,11 @@ export default function App(){
 
   async function updateMyProfile(updates){
     if(!currentUser)return;
-    const{phone,...publicUpdates}=updates;
-    if(Object.keys(publicUpdates).length>0)await updateDoc(doc(db,"users",currentUser.uid),publicUpdates);
-    if(phone!==undefined)await setDoc(doc(db,"userPrivate",currentUser.uid),{phone},{merge:true});
+    const PRIV=["phone","email","address","interests","temp","preferredRegion"];
+    const priv={},pub={};
+    Object.entries(updates).forEach(([k,v])=>{if(PRIV.includes(k))priv[k]=v;else pub[k]=v;});
+    if(Object.keys(pub).length>0)await updateDoc(doc(db,"users",currentUser.uid),pub);
+    if(Object.keys(priv).length>0)await setDoc(doc(db,"userPrivate",currentUser.uid),priv,{merge:true});
     setUserProfile(p=>({...p,...updates}));
   }
 
@@ -1565,9 +1587,9 @@ export default function App(){
           {adminTab==="dashboard"&&(<>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}><StatCard label="총 회원" value={adminStats.totalUsers} color={ADMIN_C}/><StatCard label="활성 회원" value={adminStats.activeUsers} color="#2e7d32"/><StatCard label="총 게시글" value={adminStats.totalItems}/><StatCard label="거래완료" value={adminStats.doneItems} color="#e65100"/><StatCard label="일자리" value={adminStats.totalJobs}/><StatCard label="신고" value={adminStats.reports} color={adminStats.reports>0?"#c62828":"#9e9e9e"}/></div>
             <div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:10}}>최근 가입 회원</div>
-            {[...allUsers].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5).map(u=>(<div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:32,height:32,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||u.email}</div><div style={{fontSize:11,color:"#aaa"}}>{u.email}</div></div><span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:u.status==="suspended"?"#ffebee":"#e8f5e9",color:u.status==="suspended"?"#c62828":"#2e7d32",fontWeight:500}}>{u.status==="suspended"?"정지":"활성"}</span></div>))}
+            {[...allUsers].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5).map(u=>(<div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:32,height:32,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||allUserPrivate[u.id]?.email||""}</div><div style={{fontSize:11,color:"#aaa"}}>{allUserPrivate[u.id]?.email||""}</div></div><span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:u.status==="suspended"?"#ffebee":"#e8f5e9",color:u.status==="suspended"?"#c62828":"#2e7d32",fontWeight:500}}>{u.status==="suspended"?"정지":"활성"}</span></div>))}
           </>)}
-          {adminTab==="users"&&(<><input value={adminUserQ} onChange={e=>setAdminUserQ(e.target.value)} placeholder="이름 또는 소속 검색" style={{...inp,marginBottom:14}}/><div style={{fontSize:12,color:"#aaa",marginBottom:8}}>총 {filtAdminUsers.length}명</div>{filtAdminUsers.map(u=>(<div key={u.id} style={{padding:"12px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||"미입력"}<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>{u.accountType}</span></div><div style={{fontSize:11,color:"#888"}}>{u.email}</div>{allUserPrivate[u.id]?.phone&&<div style={{fontSize:11,color:"#555",marginTop:1}}>📞 {allUserPrivate[u.id].phone}</div>}<div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>👏 앙코르 {u.encoreCount||0}회</span>{u.isAdmin&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:600}}>👑 어드민</span>}<span style={{fontSize:10,color:"#aaa"}}>{u.affiliation||"소속 미입력"}</span></div></div><div style={{display:"flex",gap:5,flexShrink:0}}>{u.id!==currentUser?.uid&&<button onClick={()=>toggleAdminRole(u.id)} style={{background:u.isAdmin?"#fff3e0":"#f5f5f5",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.isAdmin?"#e65100":"#666",cursor:"pointer",fontWeight:500}}>{u.isAdmin?"어드민 해제":"👑 지정"}</button>}{u.id!==currentUser?.uid&&<button onClick={()=>{const msg=u.status==="suspended"?"이 회원을 활성화하시겠어요?":"이 회원을 정지하시겠어요?";if(window.confirm(msg))toggleUserStatus(u.id);}} style={{background:u.status==="suspended"?"#e8f5e9":"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.status==="suspended"?"#2e7d32":"#c62828",cursor:"pointer",fontWeight:500}}>{u.status==="suspended"?"활성화":"정지"}</button>}</div></div></div>))}</>)}
+          {adminTab==="users"&&(<><input value={adminUserQ} onChange={e=>setAdminUserQ(e.target.value)} placeholder="이름 또는 소속 검색" style={{...inp,marginBottom:14}}/><div style={{fontSize:12,color:"#aaa",marginBottom:8}}>총 {filtAdminUsers.length}명</div>{filtAdminUsers.map(u=>(<div key={u.id} style={{padding:"12px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||"미입력"}<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>{u.accountType}</span></div><div style={{fontSize:11,color:"#888"}}>{allUserPrivate[u.id]?.email||""}</div>{allUserPrivate[u.id]?.phone&&<div style={{fontSize:11,color:"#555",marginTop:1}}>📞 {allUserPrivate[u.id].phone}</div>}<div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>👏 앙코르 {u.encoreCount||0}회</span>{u.isAdmin&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:600}}>👑 어드민</span>}<span style={{fontSize:10,color:"#aaa"}}>{u.affiliation||"소속 미입력"}</span></div></div><div style={{display:"flex",gap:5,flexShrink:0}}>{u.id!==currentUser?.uid&&<button onClick={()=>toggleAdminRole(u.id)} style={{background:u.isAdmin?"#fff3e0":"#f5f5f5",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.isAdmin?"#e65100":"#666",cursor:"pointer",fontWeight:500}}>{u.isAdmin?"어드민 해제":"👑 지정"}</button>}{u.id!==currentUser?.uid&&<button onClick={()=>{const msg=u.status==="suspended"?"이 회원을 활성화하시겠어요?":"이 회원을 정지하시겠어요?";if(window.confirm(msg))toggleUserStatus(u.id);}} style={{background:u.status==="suspended"?"#e8f5e9":"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.status==="suspended"?"#2e7d32":"#c62828",cursor:"pointer",fontWeight:500}}>{u.status==="suspended"?"활성화":"정지"}</button>}</div></div></div>))}</>)}
           {adminTab==="posts"&&(<><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:10}}>중고 물건 ({items.length})</div>{items.map(item=>(<div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} alt=""/>:<span>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{item.title}</div><div style={{fontSize:11,color:"#aaa"}}>{item.seller} · {item.region}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteItem(item.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:16,marginBottom:10}}>일자리 공고 ({jobs.length})</div>{jobs.map(job=>(<div key={job.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{job.title}</div><div style={{fontSize:11,color:"#aaa"}}>{job.org} · {job.location}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteJob(job.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}</>)}
           {adminTab==="stats"&&(<><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📦 카테고리별</div><BarChart data={catStats}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📍 지역별</div><BarChart data={regionStats} color={ADMIN_C}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>🏷 나누미 / 구하미</div>{(()=>{const nan=items.filter(i=>i.postType==="nanumi").length;const gu=items.filter(i=>i.postType==="guhami").length;const tot=nan+gu||1;return(<div><div style={{display:"flex",height:20,borderRadius:10,overflow:"hidden",marginBottom:8}}><div style={{width:`${(nan/tot)*100}%`,background:ACCENT}}/><div style={{width:`${(gu/tot)*100}%`,background:"#c62828"}}/></div><div style={{display:"flex",gap:16,fontSize:12}}><span style={{color:ACCENT}}>■ 나누미 {nan}개</span><span style={{color:"#c62828"}}>■ 구하미 {gu}개</span></div></div>);})()}</div></>)}
           {adminTab==="reports"&&(()=>{
