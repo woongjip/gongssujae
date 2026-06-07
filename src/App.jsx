@@ -954,14 +954,14 @@ export default function App(){
   },[unreadMsgCount]);
 
   // ── Hash routing ──
-  // 초기 URL hash 처리: currentUser 확인 후 1회 실행 (getDoc 폴백으로 데이터 로드 전에도 동작)
+  // 초기 URL hash 처리: authLoading이 끝나면 1회 실행 (로그인 여부 무관 — 비로그인 공유 링크 지원)
   useEffect(()=>{
     if(initialHashDone.current)return;
-    if(!currentUser)return;
+    if(authLoading)return; // auth 확인 완료 전까지 대기 (로그인·비로그인 모두 허용)
     initialHashDone.current=true;
     const hash=window.location.hash;
     if(hash)hashNavRef.current(hash);
-  },[currentUser]);
+  },[authLoading,currentUser]);
 
   // hashchange: 브라우저 뒤로가기 or 앞으로가기
   useEffect(()=>{
