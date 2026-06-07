@@ -531,7 +531,9 @@ export default function App(){
   function requireLogin(msg){if(currentUser)return true;setLoginPromptMsg(msg);return false;}
 
   async function handleHashNav(hash){
-    const p=parseHash(hash);if(!p)return;
+    const p=parseHash(hash);
+    console.log('[공쓰재] handleHashNav 호출. hash:',hash,'→ 파싱:', p);
+    if(!p)return;
     const doNotFound=()=>{
       console.error('[공쓰재] doNotFound 호출! hash 지워짐. ENTRY_HASH:',ENTRY_HASH);
       console.trace('[공쓰재] doNotFound 호출 스택');
@@ -1049,7 +1051,10 @@ export default function App(){
     const onHashChange=()=>{
       const hash=window.location.hash;
       const parsed=parseHash(hash);
+      console.warn('[공쓰재] 앱 hashchange 핸들러 실행! hash:',hash||'(empty)','parsed:',parsed,'screen:',screenRef.current,'entryNavDone:',entryNavDone.current);
       if(!parsed){
+        // ★ 이 분기가 실행되면 screen을 리셋 — 범인 여기
+        console.warn('[공쓰재] parsed=null → screen:',screenRef.current,'→ home 이동 여부:',(screenRef.current==="detail"||screenRef.current==="jobdetail"));
         if(screenRef.current==="detail"||screenRef.current==="jobdetail")go("home");
       }else{
         hashNavRef.current(hash);
