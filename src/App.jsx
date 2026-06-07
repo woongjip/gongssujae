@@ -198,7 +198,12 @@ export default function App(){
   const [userProfile,setUserProfile]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
   const [authStep,setAuthStep]=useState("splash"); // 첫 방문도 바로 메인 앱으로
-  const [showWelcome,setShowWelcome]=useState(()=>!localStorage.getItem('welcomeSeen'));
+  const [showWelcome,setShowWelcome]=useState(()=>{
+    if(localStorage.getItem('welcomeSeen'))return false;
+    // 공유 링크(#/item/xxx, #/job/xxx)로 진입한 경우 welcome 스킵 — 게시글 상세 우선
+    if(window.location.hash&&parseHash(window.location.hash))return false;
+    return true;
+  });
   const [loginPromptMsg,setLoginPromptMsg]=useState(null); // 비로그인 액션 안내 모달
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
