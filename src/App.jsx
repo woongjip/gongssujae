@@ -1078,6 +1078,7 @@ export default function App(){
   const tic=(t)=>({fontSize:22,color:btab===t?ACCENT:"#bbb"});
   const mkBadge=(label,bg,color)=>(<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:bg,color,fontWeight:500}}>{label}</span>);
   const [shareToast,setShareToast]=useState(false);
+  const [shareModal,setShareModal]=useState(null); // {type:'item'|'job', post}
   const [notFoundToast,setNotFoundToast]=useState(false);
   const [moreMenu,setMoreMenu]=useState(null); // "item"|"job"|null
   const sharePost=(title,text,shareUrl)=>{const url=shareUrl||"https://twr.or.kr";if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard?.writeText(url).then(()=>{setShareToast(true);setTimeout(()=>setShareToast(false),2000);});}};
@@ -1354,9 +1355,7 @@ export default function App(){
           <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={goDetailBack} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button></div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
-              {window.Kakao?.Share&&<button onClick={()=>shareKakao("item",selItem)} style={{background:"#FEE500",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",color:"#3C1E1E",letterSpacing:-0.3}}>카톡</button>}
-              <button onClick={()=>copyLink(`https://twr.or.kr/#/item/${selItem.id}`)} style={{background:LIGHT,border:`1px solid ${ACCENT}`,borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer",color:ACCENT,letterSpacing:-0.3}}>링크 복사</button>
-              <button onClick={()=>sharePost(selItem.title,`${hasShowTag(selItem.showTag)?selItem.showTag+"에서 나온 ":""}${selItem.title} — 공쓰재에서 확인해보세요`,`https://twr.or.kr/#/item/${selItem.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
+              <button onClick={()=>setShareModal({type:"item",post:selItem})} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="item"?null:"item")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="item"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
                 {isOwner&&<><button onClick={()=>{boostItem(selItem.id);setMoreMenu(null);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:"#333",textAlign:"left"}}><i className="ti ti-arrow-up" style={{color:ACCENT}}/>끌어올리기</button>
@@ -1476,9 +1475,7 @@ export default function App(){
               <span style={{fontWeight:500,fontSize:15}}>공고 상세</span>
             </div>
             <div style={{display:"flex",gap:4,alignItems:"center",position:"relative"}}>
-              {window.Kakao?.Share&&<button onClick={()=>shareKakao("job",selJob)} style={{background:"#FEE500",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",color:"#3C1E1E",letterSpacing:-0.3}}>카톡</button>}
-              <button onClick={()=>copyLink(`https://twr.or.kr/#/job/${selJob.id}`)} style={{background:LIGHT,border:`1px solid ${ACCENT}`,borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer",color:ACCENT,letterSpacing:-0.3}}>링크 복사</button>
-              <button onClick={()=>sharePost(selJob.title,`${selJob.field} ${selJob.jobType==="gujik"?"구직":"구인"} — ${selJob.title} | 공쓰재`,`https://twr.or.kr/#/job/${selJob.id}`)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
+              <button onClick={()=>setShareModal({type:"job",post:selJob})} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-share"/></button>
               {currentUser&&<button onClick={()=>setMoreMenu(m=>m==="job"?null:"job")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#888",padding:"4px 6px"}}><i className="ti ti-dots-vertical"/></button>}
               {currentUser&&moreMenu==="job"&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"100%",right:0,background:"#fff",borderRadius:14,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",zIndex:100,minWidth:140,overflow:"hidden",border:`0.5px solid ${DIVIDER}`}}>
                 {isOwner&&<><button onClick={()=>{const isHidden=selJob.hidden===true;setMoreMenu(null);if(isHidden){hideJob(selJob.id,false);}else if(window.confirm("잠시 내리기\n\n다른 사람 목록에서 숨겨져요.\n언제든지 다시 올릴 수 있어요.")){hideJob(selJob.id,true);}}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,color:selJob.hidden===true?"#2e7d32":"#555",textAlign:"left"}}><i className="ti ti-eye-off" style={{color:selJob.hidden===true?"#2e7d32":"#888"}}/>{selJob.hidden===true?"다시 올리기":"잠시 내리기"}</button>
@@ -1736,6 +1733,40 @@ export default function App(){
       </div>)}
 
       {/* 공유 복사 토스트 */}
+      {shareModal&&(()=>{
+        const{type,post}=shareModal;
+        const hashUrl=`https://twr.or.kr/#/${type}/${post.id}`;
+        const shareText=type==="item"
+          ?`${post.postType==="guhami"?"구함":post.price?`${post.price.toLocaleString()}원`:"나눔"} — ${post.title} | 공쓰재`
+          :`${post.field} ${post.jobType==="gujik"?"구직":"구인"} — ${post.title} | 공쓰재`;
+        const opts=[
+          {key:"copy",icon:"ti-link",label:"링크 복사",iconColor:ACCENT,iconBg:LIGHT,
+           action:()=>{copyLink(hashUrl);setShareModal(null);}},
+          ...(window.Kakao?.Share?[{key:"kakao",label:"카카오톡",
+           action:()=>{shareKakao(type,post);setShareModal(null);}}]:[]),
+          ...(!!navigator.share?[{key:"share",icon:"ti-share",label:"다른 앱으로 공유",iconColor:"#555",iconBg:"#f0f0f0",
+           action:()=>{navigator.share({title:post.title,text:shareText,url:hashUrl}).catch(()=>{});setShareModal(null);}}]:[]),
+        ];
+        return(
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setShareModal(null)}>
+            <div style={{background:"#fff",borderRadius:"20px 20px 0 0",width:"100%",paddingBottom:"calc(16px + env(safe-area-inset-bottom,0px))",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
+              <div style={{padding:"18px 20px 14px",borderBottom:`0.5px solid ${DIVIDER}`}}>
+                <div style={{width:36,height:4,borderRadius:4,background:"#e0e0e0",margin:"0 auto 12px"}}/>
+                <div style={{fontSize:14,fontWeight:600,color:"#1a1a1a"}}>공유하기</div>
+              </div>
+              {opts.map((opt,i)=>(
+                <button key={opt.key} onClick={opt.action} style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:"14px 20px",border:"none",borderBottom:i<opts.length-1?`0.5px solid ${DIVIDER}`:"none",background:"none",cursor:"pointer",boxSizing:"border-box",textAlign:"left"}}>
+                  {opt.key==="kakao"
+                    ?<div style={{width:42,height:42,borderRadius:12,background:"#FEE500",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>💬</div>
+                    :<div style={{width:42,height:42,borderRadius:12,background:opt.iconBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className={`ti ${opt.icon}`} style={{fontSize:20,color:opt.iconColor}}/></div>
+                  }
+                  <span style={{fontSize:15,color:"#1a1a1a",fontWeight:400}}>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       {shareToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:ACCENT,color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>🔗 링크가 복사됐어요</div>}
       {notFoundToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:"#555",color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>이 게시글은 더 이상 볼 수 없어요</div>}
       {reportToast&&<div style={{position:"absolute",bottom:"calc(80px + env(safe-area-inset-bottom,0px))",left:"50%",transform:"translateX(-50%)",background:"#333",color:"#fff",padding:"10px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:200,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>🚩 신고가 접수됐어요. 검토 후 조치할게요</div>}
