@@ -192,6 +192,9 @@ function MapPicker({loaded,onSelect}){
 
 function parseHash(h){const m=h.match(/^#\/(item|job)\/([^/]+)$/);return m?{type:m[1],id:m[2]}:null;}
 
+// 앱 로드 시점 해시를 모듈 레벨에서 캡처 — 이후 어떤 코드도 지우기 전 보존
+const ENTRY_HASH=window.location.hash;
+
 export default function App(){
   // Firebase Auth
   const [currentUser,setCurrentUser]=useState(null);
@@ -200,8 +203,8 @@ export default function App(){
   const [authStep,setAuthStep]=useState("splash"); // 첫 방문도 바로 메인 앱으로
   const [showWelcome,setShowWelcome]=useState(()=>{
     if(localStorage.getItem('welcomeSeen'))return false;
-    // 공유 링크(#/item/xxx, #/job/xxx)로 진입한 경우 welcome 스킵 — 게시글 상세 우선
-    if(window.location.hash&&parseHash(window.location.hash))return false;
+    // 공유 링크로 진입한 경우 welcome 스킵 — 모듈 레벨 ENTRY_HASH 사용 (hash가 지워진 후에도 안전)
+    if(ENTRY_HASH&&parseHash(ENTRY_HASH))return false;
     return true;
   });
   const [loginPromptMsg,setLoginPromptMsg]=useState(null); // 비로그인 액션 안내 모달
@@ -283,6 +286,7 @@ export default function App(){
   const chatEnd=useRef(null);
   const screenRef=useRef("home");
   const initialHashDone=useRef(false);
+  const entryNavDone=useRef(false); // 진입 해시 네비게이션 완료 여부 (Phase1/2 중복 방지)
   const hashNavRef=useRef(null);
 
   // ── Android 설치 프롬프트 캡처 ──
@@ -526,16 +530,39 @@ export default function App(){
 
   async function handleHashNav(hash){
     const p=parseHash(hash);if(!p)return;
-    const showNotFound=()=>{window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");};
+    const doNotFound=()=>{entryNavDone.current=true;window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");};
     if(p.type==="item"){
       let item=items.find(i=>i.id===p.id);
-      if(!item){try{const s=await getDoc(doc(db,"items",p.id));if(s.exists())item={id:s.id,...s.data()};}catch(e){}}
-      if(!item||item.hidden===true){showNotFound();return;}
+      if(!item){
+        try{
+          const s=await getDoc(doc(db,"items",p.id));
+          if(s.exists())item={id:s.id,...s.data()};
+          else{doNotFound();return;} // 문서 자체가 없음 → not found
+        }catch(e){
+          // 네트워크/SDK 오류 → 해시 보존, items 로드 후 Phase2가 재시도
+          console.warn("[hashNav] getDoc 실패, items 로드 후 재시도:",e);
+          return;
+        }
+      }
+      if(entryNavDone.current)return; // Phase2가 이미 처리
+      if(item.hidden===true){doNotFound();return;}
+      entryNavDone.current=true;
       setSelItem(item);go("detail");
     }else if(p.type==="job"){
       let job=jobs.find(j=>j.id===p.id);
-      if(!job){try{const s=await getDoc(doc(db,"jobs",p.id));if(s.exists())job={id:s.id,...s.data()};}catch(e){}}
-      if(!job||job.hidden===true){showNotFound();return;}
+      if(!job){
+        try{
+          const s=await getDoc(doc(db,"jobs",p.id));
+          if(s.exists())job={id:s.id,...s.data()};
+          else{doNotFound();return;}
+        }catch(e){
+          console.warn("[hashNav] getDoc 실패, jobs 로드 후 재시도:",e);
+          return;
+        }
+      }
+      if(entryNavDone.current)return;
+      if(job.hidden===true){doNotFound();return;}
+      entryNavDone.current=true;
       setSelJob(job);go("jobdetail");
     }
   }
@@ -971,14 +998,33 @@ export default function App(){
   },[unreadMsgCount]);
 
   // ── Hash routing ──
-  // 초기 URL hash 처리: authLoading이 끝나면 1회 실행 (로그인 여부 무관 — 비로그인 공유 링크 지원)
+  // Phase1: auth 완료 후 1회 실행. ENTRY_HASH 사용 (window.location.hash가 이미 지워졌어도 안전)
   useEffect(()=>{
     if(initialHashDone.current)return;
-    if(authLoading)return; // auth 확인 완료 전까지 대기 (로그인·비로그인 모두 허용)
+    if(authLoading)return;
     initialHashDone.current=true;
-    const hash=window.location.hash;
+    const hash=ENTRY_HASH||window.location.hash;
     if(hash)hashNavRef.current(hash);
   },[authLoading,currentUser]);
+
+  // Phase2: items/jobs 로드 후 재시도 — Phase1의 getDoc 타이밍 실패 커버
+  useEffect(()=>{
+    if(entryNavDone.current||authLoading)return;
+    const p=parseHash(ENTRY_HASH||"");if(!p)return;
+    if(p.type==="item"){
+      const found=items.find(i=>i.id===p.id);
+      if(!found)return; // 아직 로드 안 됨
+      entryNavDone.current=true;
+      if(found.hidden===true){window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");return;}
+      setSelItem(found);go("detail");
+    }else if(p.type==="job"){
+      const found=jobs.find(j=>j.id===p.id);
+      if(!found)return;
+      entryNavDone.current=true;
+      if(found.hidden===true){window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");return;}
+      setSelJob(found);go("jobdetail");
+    }
+  },[items,jobs,authLoading]);
 
   // hashchange: 브라우저 뒤로가기 or 앞으로가기
   useEffect(()=>{
