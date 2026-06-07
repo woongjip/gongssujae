@@ -192,8 +192,10 @@ function MapPicker({loaded,onSelect}){
 
 function parseHash(h){const m=h.match(/^#\/(item|job)\/([^/]+)$/);return m?{type:m[1],id:m[2]}:null;}
 
-// 앱 로드 시점 해시를 모듈 레벨에서 캡처 — 이후 어떤 코드도 지우기 전 보존
-const ENTRY_HASH=window.location.hash;
+// index.html 인라인 스크립트(카카오 SDK 이전)에서 저장한 hash 사용
+// window.__entryHash가 없으면 현재 hash로 폴백
+const ENTRY_HASH=window.__entryHash||window.location.hash;
+console.log('[공쓰재] ENTRY_HASH (module load):', ENTRY_HASH, '| window.location.hash now:', window.location.hash);
 
 export default function App(){
   // Firebase Auth
@@ -530,38 +532,50 @@ export default function App(){
 
   async function handleHashNav(hash){
     const p=parseHash(hash);if(!p)return;
-    const doNotFound=()=>{entryNavDone.current=true;window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");};
+    const doNotFound=()=>{
+      console.error('[공쓰재] doNotFound 호출! hash 지워짐. ENTRY_HASH:',ENTRY_HASH);
+      console.trace('[공쓰재] doNotFound 호출 스택');
+      entryNavDone.current=true;
+      window.location.hash="";
+      setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");
+    };
+    console.log('[공쓰재] Phase1 handleHashNav 시작. hash:',hash,'items.length:',items.length,'entryNavDone:',entryNavDone.current);
     if(p.type==="item"){
       let item=items.find(i=>i.id===p.id);
       if(!item){
+        console.log('[공쓰재] Phase1: items에 없음 → getDoc 시도. id:',p.id);
         try{
           const s=await getDoc(doc(db,"items",p.id));
+          console.log('[공쓰재] Phase1: getDoc 완료. exists:',s.exists());
           if(s.exists())item={id:s.id,...s.data()};
-          else{doNotFound();return;} // 문서 자체가 없음 → not found
+          else{console.error('[공쓰재] Phase1: 문서 없음(exists=false)');doNotFound();return;}
         }catch(e){
-          // 네트워크/SDK 오류 → 해시 보존, items 로드 후 Phase2가 재시도
-          console.warn("[hashNav] getDoc 실패, items 로드 후 재시도:",e);
+          console.warn('[공쓰재] Phase1: getDoc 예외 발생 → hash 보존, Phase2 대기. error:',e.message||e);
           return;
         }
       }
-      if(entryNavDone.current)return; // Phase2가 이미 처리
-      if(item.hidden===true){doNotFound();return;}
+      if(entryNavDone.current){console.log('[공쓰재] Phase1: entryNavDone=true, Phase2가 이미 처리');return;}
+      if(item.hidden===true){console.warn('[공쓰재] Phase1: item.hidden=true');doNotFound();return;}
+      console.log('[공쓰재] Phase1: 성공! detail로 이동. id:',item.id);
       entryNavDone.current=true;
       setSelItem(item);go("detail");
     }else if(p.type==="job"){
       let job=jobs.find(j=>j.id===p.id);
       if(!job){
+        console.log('[공쓰재] Phase1: jobs에 없음 → getDoc 시도. id:',p.id);
         try{
           const s=await getDoc(doc(db,"jobs",p.id));
+          console.log('[공쓰재] Phase1: job getDoc 완료. exists:',s.exists());
           if(s.exists())job={id:s.id,...s.data()};
-          else{doNotFound();return;}
+          else{console.error('[공쓰재] Phase1: job 문서 없음');doNotFound();return;}
         }catch(e){
-          console.warn("[hashNav] getDoc 실패, jobs 로드 후 재시도:",e);
+          console.warn('[공쓰재] Phase1: job getDoc 예외 → hash 보존. error:',e.message||e);
           return;
         }
       }
-      if(entryNavDone.current)return;
-      if(job.hidden===true){doNotFound();return;}
+      if(entryNavDone.current){console.log('[공쓰재] Phase1: job entryNavDone=true');return;}
+      if(job.hidden===true){console.warn('[공쓰재] Phase1: job.hidden=true');doNotFound();return;}
+      console.log('[공쓰재] Phase1: job 성공! jobdetail로 이동. id:',job.id);
       entryNavDone.current=true;
       setSelJob(job);go("jobdetail");
     }
@@ -1004,6 +1018,7 @@ export default function App(){
     if(authLoading)return;
     initialHashDone.current=true;
     const hash=ENTRY_HASH||window.location.hash;
+    console.log('[공쓰재] Phase1 effect 실행. hash:',hash,'authLoading:',authLoading,'currentUser:',!!currentUser);
     if(hash)hashNavRef.current(hash);
   },[authLoading,currentUser]);
 
@@ -1011,15 +1026,18 @@ export default function App(){
   useEffect(()=>{
     if(entryNavDone.current||authLoading)return;
     const p=parseHash(ENTRY_HASH||"");if(!p)return;
+    console.log('[공쓰재] Phase2 effect 실행. items.length:',items.length,'jobs.length:',jobs.length,'entryNavDone:',entryNavDone.current);
     if(p.type==="item"){
       const found=items.find(i=>i.id===p.id);
-      if(!found)return; // 아직 로드 안 됨
+      if(!found){console.log('[공쓰재] Phase2: 아직 item 없음, 대기 중');return;}
+      console.log('[공쓰재] Phase2: item 찾음! id:',found.id,'hidden:',found.hidden);
       entryNavDone.current=true;
       if(found.hidden===true){window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");return;}
       setSelItem(found);go("detail");
     }else if(p.type==="job"){
       const found=jobs.find(j=>j.id===p.id);
-      if(!found)return;
+      if(!found){console.log('[공쓰재] Phase2: 아직 job 없음, 대기 중');return;}
+      console.log('[공쓰재] Phase2: job 찾음! id:',found.id,'hidden:',found.hidden);
       entryNavDone.current=true;
       if(found.hidden===true){window.location.hash="";setNotFoundToast(true);setTimeout(()=>setNotFoundToast(false),2500);go("home");return;}
       setSelJob(found);go("jobdetail");

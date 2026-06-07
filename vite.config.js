@@ -7,6 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        skipWaiting: true,   // 새 서비스워커 즉시 활성화 (캐시 구버전 방지)
+        clientsClaim: true,
+      },
       manifest: {
         name: '공쓰재',
         short_name: '공쓰재',
