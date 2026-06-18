@@ -12,6 +12,7 @@ import {
 } from "firebase/auth";
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getAnalytics, logEvent as _logEvent } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBRvtpDpSO6JAT-UJHVApDmLCXhanIFuqM",
@@ -19,13 +20,20 @@ const firebaseConfig = {
   projectId: "gonssujae",
   storageBucket: "gonssujae.firebasestorage.app",
   messagingSenderId: "779975780698",
-  appId: "1:779975780698:web:6d82afbd89c7fb5d0cab63"
+  appId: "1:779975780698:web:6d82afbd89c7fb5d0cab63",
+  measurementId: "G-YJL3VCPTJW"
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+let _analytics = null;
+try { _analytics = getAnalytics(app); } catch (_) {}
+export function logEvent(name, params) {
+  if (_analytics) try { _logEvent(_analytics, name, params); } catch (_) {}
+}
 export { storageRef, uploadBytes, getDownloadURL };
 
 export const VAPID_KEY = "BCgJza_FMPGfPIr977rEmVY1bQR06sb8p5gPmyc5tMe5_OUzR6fMWN7IpOdCYFmIUPUMIeEzQz2paKo3xGd-kYY";
