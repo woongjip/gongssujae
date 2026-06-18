@@ -291,6 +291,8 @@ export default function App(){
   const initialHashDone=useRef(false);
   const entryNavDone=useRef(false); // 진입 해시 네비게이션 완료 여부 (Phase1/2 중복 방지)
   const hashNavRef=useRef(null);
+  const pwaModalShownRef=useRef(false);
+  const standaloneNotifAsked=useRef(false);
 
   // ── Android 설치 프롬프트 캡처 ──
   useEffect(()=>{
@@ -312,6 +314,28 @@ export default function App(){
     if(localStorage.getItem('pwaInstallDismissed'))return;
     setShowPWABanner(true);
   },[currentUser]);
+
+  // ── PWA 설치 안내 모달 닫힌 직후 알림 권한 요청 ──
+  useEffect(()=>{
+    if(showPWAModal){pwaModalShownRef.current=true;return;}
+    if(!pwaModalShownRef.current)return;
+    pwaModalShownRef.current=false;
+    if(!currentUser)return;
+    if(typeof Notification==="undefined"||Notification.permission!=="default")return;
+    if(localStorage.getItem('pushDismissed'))return;
+    const t=setTimeout(()=>setShowPushModal(true),350);
+    return()=>clearTimeout(t);
+  },[showPWAModal,currentUser]);
+
+  // ── standalone(설치형) 앱 진입 시 알림 권한 요청 ──
+  useEffect(()=>{
+    if(!isStandalone||standaloneNotifAsked.current||authLoading||!currentUser)return;
+    if(typeof Notification==="undefined"||Notification.permission!=="default")return;
+    if(localStorage.getItem('pushDismissed'))return;
+    standaloneNotifAsked.current=true;
+    const t=setTimeout(()=>setShowPushModal(true),1500);
+    return()=>clearTimeout(t);
+  },[currentUser,authLoading]);
 
   // ── Firebase Auth listener ──
   useEffect(()=>{
