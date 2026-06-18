@@ -11,9 +11,9 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // items: 작성자만 전체 수정/삭제, 비작성자는 likedBy·chatCount만
+    // items: 비로그인도 읽기 허용, write는 로그인 필요
     match /items/{itemId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn()
                     && request.resource.data.sellerId == request.auth.uid;
       allow update: if isSignedIn()
@@ -32,6 +32,7 @@ service cloud.firestore {
                                  .hasOnly([request.auth.uid])
                           )
                           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chatCount'])
+                          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
                         )
                       )
                     );
@@ -39,13 +40,24 @@ service cloud.firestore {
                     && (resource.data.sellerId == request.auth.uid || isAdmin());
     }
 
-    // jobs: sellerId 기준 (코드에서 sellerId 필드 사용)
+    // jobs: 비로그인도 읽기 허용, write는 로그인 필요
     match /jobs/{jobId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn()
                     && request.resource.data.sellerId == request.auth.uid;
       allow update: if isSignedIn()
                     && resource.data.sellerId == request.auth.uid;
+      allow delete: if isSignedIn()
+                    && (resource.data.sellerId == request.auth.uid || isAdmin());
+    }
+
+    // itemPrivate: 게시글 연락처 — 어드민만 읽기, 작성자 쓰기
+    match /itemPrivate/{itemId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.sellerId == request.auth.uid;
+      allow update: if isSignedIn()
+                    && (resource.data.sellerId == request.auth.uid || isAdmin());
       allow delete: if isSignedIn()
                     && (resource.data.sellerId == request.auth.uid || isAdmin());
     }

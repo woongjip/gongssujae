@@ -12,7 +12,7 @@ import {
 } from "firebase/auth";
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getAnalytics, logEvent as _logEvent } from "firebase/analytics";
+import { getAnalytics, logEvent as _logEvent, isSupported as isAnalyticsSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBRvtpDpSO6JAT-UJHVApDmLCXhanIFuqM",
@@ -30,7 +30,12 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 let _analytics = null;
-try { _analytics = getAnalytics(app); } catch (_) {}
+isAnalyticsSupported().then(ok => {
+  if (!ok) return;
+  _analytics = getAnalytics(app);
+  console.log('[공쓰재] Firebase Analytics 초기화 완료');
+}).catch(e => console.warn('[공쓰재] Analytics 초기화 실패:', e));
+
 export function logEvent(name, params) {
   if (_analytics) try { _logEvent(_analytics, name, params); } catch (_) {}
 }
