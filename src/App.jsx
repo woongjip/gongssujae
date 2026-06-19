@@ -1952,7 +1952,156 @@ export default function App(){
             </div>
           </div>
         );
-        const bodyContents={terms:termsContent,privacy:privacyContent};
+        const appinfoContent=(
+          <div style={{padding:"0 0 120px"}}>
+            <div style={{background:`linear-gradient(135deg,${ACCENT},#1a6a8a)`,padding:"28px 20px 24px"}}>
+              <div style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.65)",letterSpacing:2,marginBottom:6}}>TWR · THEATRE WASTE RECYCLE</div>
+              <div style={{fontSize:22,fontWeight:700,color:"#fff",lineHeight:1.3,marginBottom:4}}>공연 쓰고 남은 거,<br/>재활용</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,0.75)"}}>공쓰재</div>
+            </div>
+            <div style={{padding:"24px 20px 0"}}>
+              <p style={{fontSize:14,lineHeight:1.9,color:"#333",marginBottom:20}}>
+                공연이 끝나면 무대 위 소품과 세트는 갈 곳을 잃습니다. 폐기하자니 비용이 들고, 어딘가 필요한 곳이 있을 것 같은데 연결할 길이 없었습니다. 우리는 이렇게 버려지는 것들을 '공연쓰레기'라 부릅니다.
+              </p>
+              <p style={{fontSize:14,lineHeight:1.9,color:"#333",marginBottom:20}}>
+                공쓰재는 공연쓰레기를 폐기하는 대신, 필요한 사람과 나누는 통로입니다. 쓰고 남은 무대 소품과 세트, 의상, 분장 도구, 장비를 누구나 쉽게 나누고 구할 수 있습니다.
+              </p>
+              <p style={{fontSize:14,lineHeight:1.9,color:"#333",marginBottom:20}}>
+                우리가 바라는 건 공연과 환경이 함께 가는 길입니다. 무대 위 물건들이 한 번 쓰이고 사라지는 대신, 다시 쓰이고 순환하면서 — 제작비를 아끼고, 더 좋은 작품을 만들고, 무대기술 아이디어가 자유롭게 오가는 공연 커뮤니티가 되기를 바랍니다.
+              </p>
+              <div style={{padding:"14px 16px",background:LIGHT,borderRadius:12,marginBottom:24}}>
+                <div style={{fontSize:13,fontWeight:600,color:ACCENT,marginBottom:2}}>나눔이 우선입니다.</div>
+                <div style={{fontSize:13,lineHeight:1.8,color:"#555"}}>사고파는 것보다, 함께 쓰는 것이 공쓰재의 마음입니다.</div>
+              </div>
+              <div style={{marginBottom:28}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#888",marginBottom:10}}>나누는 물품</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {["목재","가구","의상","분장 도구","댄스플로어","암막","소품","그 외 모든 것"].map(tag=>(
+                    <span key={tag} style={{padding:"5px 12px",borderRadius:20,background:"#fff",border:`1px solid ${DIVIDER}`,fontSize:12,color:"#555"}}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{borderTop:`1px solid ${DIVIDER}`,paddingTop:20,textAlign:"center"}}>
+                <div style={{fontSize:11,color:"#bbb",lineHeight:1.8}}>
+                  Powered by 스탭서울<br/>
+                  Sponsored by You
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+        const guideContent=(
+          <div style={{padding:"20px 20px 120px"}}>
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:17,fontWeight:700,color:"#1a1a1a",lineHeight:1.4,marginBottom:16}}>
+                공쓰재는 나누미와 구하미의 공간입니다
+              </div>
+              <div style={{display:"flex",gap:10,marginBottom:24}}>
+                <div style={{flex:1,padding:"14px 14px",background:LIGHT,borderRadius:12}}>
+                  <div style={{fontSize:12,fontWeight:700,color:ACCENT,marginBottom:4}}>나누미</div>
+                  <div style={{fontSize:12,color:"#555",lineHeight:1.6}}>쓰고 남은 걸<br/>나누는 사람</div>
+                </div>
+                <div style={{flex:1,padding:"14px 14px",background:"#f0f4ff",borderRadius:12}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#5b6abf",marginBottom:4}}>구하미</div>
+                  <div style={{fontSize:12,color:"#555",lineHeight:1.6}}>필요한 걸<br/>구하는 사람</div>
+                </div>
+              </div>
+              <div style={{fontSize:13,fontWeight:600,color:"#888",marginBottom:16}}>나누미와 구하미의 공쓰재 일기</div>
+              {[
+                ["하나.","나누미는 철수를 앞두고 걱정입니다. 이 소품들, 폐기하자니 돈이 들고 남 주자니 누구한테 줘야 할지 모르겠습니다."],
+                ["둘.","구하미는 스탭 회의를 마치고 막막합니다. 연출이 생전 본 적도 없는 걸 구해 오라고 합니다. 그때 그 공연에서 봤던 그건 어디 가면 구할까요?"],
+                ["셋.","나누미는 공쓰재에 물건을 올립니다. 사진 한 장 찍어 올리고, 물품 정보를 적습니다. 구하미는 둘러보다 마음에 드는 걸 발견합니다."],
+                ["넷.","구하미가 채팅으로 말을 겁니다. 둘은 약속 장소와 시간을 정합니다."],
+                ["다섯.","철수하는 날, 두 사람은 현장에서 만납니다. 버려질 뻔한 소품이 새 무대로 갑니다."],
+              ].map(([num,text])=>(
+                <div key={num} style={{display:"flex",gap:12,marginBottom:16,alignItems:"flex-start"}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <span style={{fontSize:11,fontWeight:700,color:ACCENT}}>{num}</span>
+                  </div>
+                  <div style={{fontSize:13,lineHeight:1.8,color:"#444",paddingTop:8}}>{text}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:13,fontWeight:600,color:"#1a1a1a",marginBottom:12}}>올릴 때 이렇게 하면 좋아요</div>
+              {["물품 전체가 잘 보이는 선명한 사진 한 장","물품 정보 — 사이즈(가로·세로·높이), 색상, 특징과 장점","물품 위치 — 구하미가 찾으러 올 곳 (예: 서울시 성북구)","나누미 소개 — 단체나 작품을 적으면 홍보도 돼요 (예: ○○극단)"].map((t,i)=>(
+                <div key={i} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
+                  <span style={{color:ACCENT,fontSize:14,flexShrink:0,marginTop:1}}>·</span>
+                  <span style={{fontSize:13,color:"#444",lineHeight:1.7}}>{t}</span>
+                </div>
+              ))}
+              <div style={{marginTop:12,padding:"12px 14px",background:"#f9f9f9",borderRadius:10,fontSize:12,color:"#666",lineHeight:1.7}}>
+                구하미는 '물품 위치' 대신, 찾는 물건을 봤던 공연이나 단체명을 적으면 좋아요.
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"#1a1a1a",marginBottom:12}}>이렇게 쓰세요</div>
+              {["둘러보기는 로그인 없이 자유롭게","글쓰기·채팅·찜은 회원가입 후","물건이나 일자리를 올려요 (나눔 · 구함 · 판매)","마음에 들면 채팅으로 연락해요","연락처는 채팅에서 본인이 원할 때만 공유돼요"].map((t,i)=>(
+                <div key={i} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}>
+                  <div style={{width:22,height:22,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <span style={{fontSize:11,fontWeight:700,color:"#fff"}}>{i+1}</span>
+                  </div>
+                  <span style={{fontSize:13,color:"#444",lineHeight:1.7,paddingTop:3}}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+        const noticeContent=(
+          <div style={{padding:"20px 20px 120px"}}>
+            <div style={{fontSize:16,fontWeight:700,color:"#1a1a1a",marginBottom:20}}>공쓰재 거래, 이것만 기억해주세요</div>
+            {[
+              {icon:"ti-heart",title:"나눔이 먼저입니다.",text:"공쓰재는 무상 나눔을 우선으로 합니다. 필요한 경우 판매도 할 수 있지만, 함께 쓰는 마음이 먼저입니다."},
+              {icon:"ti-map-pin",title:"현장에서 받아주세요.",text:"창고 없는 극단들을 위한 취지입니다. 철수하는 날 현장에서 주고받는 것을 권합니다. 택배는 양쪽이 합의하면 가능하지만, 책임은 거래 당사자에게 있어요."},
+              {icon:"ti-users",title:"책임은 거래 당사자에게.",text:"공쓰재는 만남의 자리를 열어줄 뿐, 거래의 당사자는 나누미와 구하미 본인입니다. 손해·배상에 대한 책임은 실제 거래자에게 있습니다."},
+              {icon:"ti-shield",title:"개인정보를 조심하세요.",text:"거래 중 연락처 등 개인정보가 오갈 수 있으니 각별히 주의해주세요. 공쓰재는 채팅 안에서 본인이 원할 때만 연락처가 공유되도록 하고 있습니다."},
+              {icon:"ti-check",title:"거래가 끝나면 상태를 바꿔주세요.",text:"거래 완료 표시를 안 하면, 이미 나눈 물건에 계속 연락이 올 수 있어요."},
+            ].map(({icon,title,text})=>(
+              <div key={title} style={{display:"flex",gap:12,marginBottom:18,alignItems:"flex-start"}}>
+                <div style={{width:36,height:36,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <i className={`ti ${icon}`} style={{fontSize:17,color:ACCENT}}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"#1a1a1a",marginBottom:3}}>{title}</div>
+                  <div style={{fontSize:13,color:"#555",lineHeight:1.8}}>{text}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{marginTop:8,borderTop:`1px solid ${DIVIDER}`,paddingTop:20}}>
+              <div style={{padding:"16px",background:LIGHT,borderRadius:12}}>
+                <div style={{fontSize:13,fontWeight:700,color:ACCENT,marginBottom:6}}>공지 · 공쓰재 베타 오픈 🎉</div>
+                <div style={{fontSize:13,color:"#444",lineHeight:1.8,marginBottom:12}}>
+                  공연 쓰고 남은 거, 재활용하는 공쓰재가 문을 열었습니다. 나누미와 구하미 여러분의 참여를 기다립니다. 버려질 뻔한 무대 위 물건들이 새 작품으로 이어지길 바랍니다.
+                </div>
+                <div style={{fontSize:12,color:"#888"}}>문의 — w3master@staffseoul.com</div>
+                <div style={{fontSize:12,color:"#888"}}>facebook.com/twr.or.kr</div>
+              </div>
+            </div>
+          </div>
+        );
+        const contactContent=(
+          <div style={{padding:"28px 20px 120px"}}>
+            <div style={{fontSize:14,color:"#555",lineHeight:1.8,marginBottom:28}}>
+              공쓰재 이용 관련 문의, 오류 신고, 의견을 보내주세요.
+            </div>
+            {[
+              {icon:"ti-mail",label:"이메일",value:"w3master@staffseoul.com",action:()=>window.location.href="mailto:w3master@staffseoul.com"},
+              {icon:"ti-brand-facebook",label:"페이스북",value:"facebook.com/twr.or.kr",action:()=>window.open("https://www.facebook.com/twr.or.kr","_blank")},
+            ].map(({icon,label,value,action})=>(
+              <div key={label} onClick={action} style={{display:"flex",alignItems:"center",gap:14,padding:"16px",background:"#fff",borderRadius:14,border:`1px solid ${DIVIDER}`,marginBottom:12,cursor:"pointer"}}>
+                <div style={{width:40,height:40,borderRadius:12,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <i className={`ti ${icon}`} style={{fontSize:20,color:ACCENT}}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,color:"#aaa",marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:13,color:"#1a1a1a",fontWeight:500}}>{value}</div>
+                </div>
+                <i className="ti ti-external-link" style={{fontSize:15,color:"#ccc"}}/>
+              </div>
+            ))}
+          </div>
+        );
+        const bodyContents={terms:termsContent,privacy:privacyContent,appinfo:appinfoContent,guide:guideContent,notice:noticeContent,contact:contactContent};
         return(
           <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
             <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
