@@ -1848,7 +1848,111 @@ export default function App(){
             <div style={{fontSize:14,color:"#aaa",textAlign:"center"}}>콘텐츠를 준비 중이에요</div>
           </div>
         );
-        const bodyContents={terms:termsContent};
+        const privacyContent=(
+          <div style={{padding:"20px 20px 120px"}}>
+            <div style={{fontSize:11,color:"#aaa",marginBottom:22,paddingBottom:14,borderBottom:`1px solid ${DIVIDER}`}}>
+              시행일: 2026년 6월 19일 · 운영: (주)스탭서울
+            </div>
+            <Art t="1. 수집하는 개인정보 항목 및 수집 방법">
+              <div style={{marginBottom:10}}>
+                <span style={{fontWeight:600,fontSize:12,color:ACCENT}}>필수 항목</span>
+                <div style={{marginTop:6,background:"#f9f9f9",borderRadius:8,overflow:"hidden"}}>
+                  {[
+                    ["이름","회원가입 시","거래 당사자 식별"],
+                    ["전화번호","회원가입 시","거래 연락 수단"],
+                    ["이메일","회원가입 시","계정 인증·비밀번호 재설정"],
+                  ].map(([item,when,why],i)=>(
+                    <div key={i} style={{display:"flex",gap:8,padding:"8px 12px",borderBottom:i<2?`0.5px solid ${DIVIDER}`:"none",fontSize:12}}>
+                      <span style={{width:80,color:"#1a1a1a",fontWeight:500,flexShrink:0}}>{item}</span>
+                      <span style={{width:90,color:"#666",flexShrink:0}}>{when}</span>
+                      <span style={{color:"#888",flex:1}}>{why}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span style={{fontWeight:600,fontSize:12,color:"#888"}}>선택 항목</span>
+                <div style={{marginTop:6,background:"#f9f9f9",borderRadius:8,overflow:"hidden"}}>
+                  {[
+                    ["주소","회원가입 시","지역 기반 매칭"],
+                    ["소속","회원가입 시","프로필 표시"],
+                    ["관심 분야","회원가입 시","맞춤 정보 제공"],
+                    ["거래장소","게시글 등록 시","지도 표시"],
+                    ["기기 토큰(FCM)","알림 허용 시","채팅 알림 전송"],
+                    ["게시글·채팅 내용","서비스 이용 중","서비스 제공"],
+                  ].map(([item,when,why],i,arr)=>(
+                    <div key={i} style={{display:"flex",gap:8,padding:"8px 12px",borderBottom:i<arr.length-1?`0.5px solid ${DIVIDER}`:"none",fontSize:12}}>
+                      <span style={{width:80,color:"#1a1a1a",fontWeight:500,flexShrink:0}}>{item}</span>
+                      <span style={{width:90,color:"#666",flexShrink:0}}>{when}</span>
+                      <span style={{color:"#888",flex:1}}>{why}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Art>
+            <Art t="2. 개인정보 이용 목적">
+              · 회원 식별 및 서비스 이용 관리<Br/>
+              · 물품 나눔·거래 연결 및 채팅 서비스 제공<Br/>
+              · 일자리 정보 공유 서비스 제공<Br/>
+              · 채팅 알림(푸시 메시지) 발송<Br/>
+              · 부정 이용 방지 및 서비스 운영·개선<Br/>
+              · 공지사항 전달
+            </Art>
+            <Art t="3. 보유 및 이용 기간">
+              · 회원 정보: 탈퇴 즉시 삭제 (단, 관계 법령에 따른 보관 의무가 있는 경우 해당 기간 보관)<Br/>
+              · 기기 토큰(FCM): 로그아웃 또는 알림 해제 시 즉시 삭제<Br/>
+              · 게시글·채팅: 회원 삭제 요청 시 삭제<Br/>
+              · 거래장소(좌표): 해당 게시글 삭제 시 삭제<Br/><Br/>
+              관련 법령에 의한 의무 보관 기간이 있는 경우 해당 기간 동안 분리 보관 후 파기합니다.
+            </Art>
+            <Art t="4. 제3자 제공 및 처리위탁">
+              회사는 원칙적으로 이용자의 개인정보를 외부에 제공하지 않습니다. 다만, 서비스 운영을 위해 아래 업체에 처리를 위탁합니다.<Br/><Br/>
+              <div style={{background:"#f9f9f9",borderRadius:8,overflow:"hidden"}}>
+                {[
+                  ["Firebase (Google LLC)","인증·데이터베이스·파일 저장·FCM 알림","미국 (국외이전)"],
+                  ["Kakao Corp.","지도 표시·카카오톡 공유","국내"],
+                  ["Google Analytics","서비스 이용 통계 (익명화 처리)","미국 (국외이전)"],
+                ].map(([co,task,loc],i,arr)=>(
+                  <div key={i} style={{padding:"10px 12px",borderBottom:i<arr.length-1?`0.5px solid ${DIVIDER}`:"none",fontSize:12}}>
+                    <div style={{fontWeight:600,color:"#1a1a1a",marginBottom:3}}>{co}</div>
+                    <div style={{color:"#666",marginBottom:2}}>위탁 업무: {task}</div>
+                    <div style={{color:"#888"}}>서버 위치: {loc}</div>
+                  </div>
+                ))}
+              </div>
+              <Br/>
+              Firebase 및 Google Analytics의 미국 서버 이전에 관한 정보는 Google 개인정보처리방침에서 확인할 수 있습니다.
+            </Art>
+            <Art t="5. 이용자의 권리 및 행사 방법">
+              이용자는 언제든지 다음 권리를 행사할 수 있습니다.<Br/>
+              · 개인정보 열람 요청<Br/>
+              · 개인정보 정정·삭제 요청<Br/>
+              · 개인정보 처리 정지 요청<Br/><Br/>
+              앱 내 MY → 설정에서 직접 수정·탈퇴하거나, 아래 개인정보 보호책임자에게 이메일로 요청하실 수 있습니다. 요청을 받은 날로부터 10일 이내에 처리합니다.
+            </Art>
+            <Art t="6. 개인정보 파기 절차 및 방법">
+              이용 목적이 달성된 개인정보는 지체 없이 파기합니다.<Br/>
+              · 전자적 파일: 복구 불가능한 방법으로 영구 삭제<Br/>
+              · 법령에 의한 보관 필요 정보: 별도 DB에 분리 보관 후 기간 만료 시 파기
+            </Art>
+            <Art t="7. 개인정보 보호책임자">
+              이용자의 개인정보 관련 문의·불만·피해 구제를 담당합니다.<Br/><Br/>
+              책임자: (주)스탭서울 운영팀<Br/>
+              이메일: z@staffseoul.com<Br/><Br/>
+              개인정보 침해 관련 신고·상담은 아래 기관에도 문의할 수 있습니다.<Br/>
+              · 개인정보보호위원회: privacy.go.kr / 국번 없이 182<Br/>
+              · 한국인터넷진흥원 개인정보침해신고센터: privacy.kisa.or.kr / 118
+            </Art>
+            <Art t="8. 방침 변경 시 고지">
+              이 방침을 변경할 경우 시행 7일 전에 서비스 내 공지를 통해 사전 고지합니다.
+            </Art>
+            <div style={{marginTop:8,padding:"12px 14px",background:"#f9f9f9",borderRadius:10,fontSize:11,color:"#aaa",lineHeight:1.7}}>
+              ※ 이 방침은 초안이며, 정식 법률 검토를 거쳐 확정됩니다.<Br/>
+              부칙: 이 방침은 2026년 6월 19일부터 시행합니다.
+            </div>
+          </div>
+        );
+        const bodyContents={terms:termsContent,privacy:privacyContent};
         return(
           <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
             <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
