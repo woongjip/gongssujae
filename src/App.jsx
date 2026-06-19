@@ -1777,10 +1777,10 @@ export default function App(){
         const termsContent=(
           <div style={{padding:"20px 20px 120px"}}>
             <div style={{fontSize:11,color:"#aaa",marginBottom:22,paddingBottom:14,borderBottom:`1px solid ${DIVIDER}`}}>
-              시행일: 2026년 6월 19일 · 운영: (주)스탭서울
+              시행일: 2026년 6월 19일 · 운영: (주)스탭서울컴퍼니
             </div>
             <Art t="제1조 (목적)">
-              이 약관은 (주)스탭서울(이하 "회사")이 운영하는 공쓰재 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 관계를 규정함을 목적으로 합니다.
+              이 약관은 (주)스탭서울컴퍼니(이하 "회사")이 운영하는 공쓰재 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 관계를 규정함을 목적으로 합니다.
             </Art>
             <Art t="제2조 (정의)">
               ① "서비스"란 공연·문화예술 분야의 소품·의상·장비 등 물품 나눔 및 거래, 일자리 정보 공유, 공간 연결(준비 중) 등을 위한 공쓰재 플랫폼을 말합니다.<Br/>
@@ -1832,9 +1832,9 @@ export default function App(){
               ② 서비스 이용과 관련한 분쟁의 관할 법원은 민사소송법에 따른 관할 법원으로 합니다.
             </Art>
             <Art t="제11조 (운영자 연락처)">
-              회사명: (주)스탭서울<Br/>
+              회사명: (주)스탭서울컴퍼니<Br/>
               서비스명: 공쓰재<Br/>
-              이메일: z@staffseoul.com
+              이메일: w3master@staffseoul.com
             </Art>
             <div style={{marginTop:8,padding:"12px 14px",background:"#f9f9f9",borderRadius:10,fontSize:11,color:"#aaa",lineHeight:1.7}}>
               ※ 이 약관은 초안이며, 정식 법률 검토를 거쳐 확정됩니다.<Br/>
