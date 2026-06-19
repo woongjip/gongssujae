@@ -2253,7 +2253,7 @@ export default function App(){
               {icon:"ti-shield",       label:"개인정보처리방침",  action:()=>{go("privacy");setShowAppMenu(false);}},
               {divider:true},
               {icon:"ti-brand-facebook",  label:"페이스북",      action:()=>{window.open("https://www.facebook.com/twr.or.kr","_blank");setShowAppMenu(false);}},
-              {icon:"ti-brand-instagram", label:"인스타그램",     disabled:true, action:()=>{}},
+              {icon:"ti-brand-instagram", label:"인스타그램",     action:()=>{window.open("https://www.instagram.com/twr.or.kr","_blank");setShowAppMenu(false);}},
             ].map((item,i)=>
               item.divider
                 ?<div key={i} style={{height:"0.5px",background:DIVIDER,margin:"4px 0"}}/>
