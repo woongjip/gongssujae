@@ -1851,7 +1851,7 @@ export default function App(){
         const privacyContent=(
           <div style={{padding:"20px 20px 120px"}}>
             <div style={{fontSize:11,color:"#aaa",marginBottom:22,paddingBottom:14,borderBottom:`1px solid ${DIVIDER}`}}>
-              시행일: 2026년 6월 19일 · 운영: (주)스탭서울
+              시행일: 2026년 6월 19일 · 운영: (주)스탭서울컴퍼니
             </div>
             <Art t="1. 수집하는 개인정보 항목 및 수집 방법">
               <div style={{marginBottom:10}}>
@@ -1937,8 +1937,8 @@ export default function App(){
             </Art>
             <Art t="7. 개인정보 보호책임자">
               이용자의 개인정보 관련 문의·불만·피해 구제를 담당합니다.<Br/><Br/>
-              책임자: (주)스탭서울 운영팀<Br/>
-              이메일: z@staffseoul.com<Br/><Br/>
+              책임자: (주)스탭서울컴퍼니<Br/>
+              이메일: w3master@staffseoul.com<Br/><Br/>
               개인정보 침해 관련 신고·상담은 아래 기관에도 문의할 수 있습니다.<Br/>
               · 개인정보보호위원회: privacy.go.kr / 국번 없이 182<Br/>
               · 한국인터넷진흥원 개인정보침해신고센터: privacy.kisa.or.kr / 118
