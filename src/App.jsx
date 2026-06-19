@@ -246,6 +246,7 @@ export default function App(){
   const [showPWAModal,setShowPWAModal]=useState(false);
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [showPushModal,setShowPushModal]=useState(false);
+  const [showAppMenu,setShowAppMenu]=useState(false);
   const [showR,setShowR]=useState(false);
   const [showJR,setShowJR]=useState(false);
   const [editItem,setEditItem]=useState(null);
@@ -1275,6 +1276,7 @@ export default function App(){
                 <i className="ti ti-bell"/>
                 {unreadMsgCount>0&&<span style={{position:"absolute",top:2,right:4,width:8,height:8,borderRadius:"50%",background:"#e53935"}}/>}
               </button>
+              <button onClick={()=>setShowAppMenu(true)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#888",padding:"4px 8px"}}><i className="ti ti-menu-2"/></button>
             </div>
           </div>
           {showSearch&&<div style={{display:"flex",alignItems:"center",background:"#f5f5f5",borderRadius:12,padding:"9px 12px",marginBottom:10,gap:8}}>
@@ -1762,6 +1764,23 @@ export default function App(){
         </div>
       </div>)}
 
+      {/* 앱 정보 화면들 */}
+      {["appinfo","guide","notice","contact","terms","privacy"].includes(screen)&&(()=>{
+        const titles={appinfo:"공쓰재 소개",guide:"이용 안내",notice:"공지사항",contact:"문의하기",terms:"이용약관",privacy:"개인정보처리방침"};
+        return(
+          <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
+            <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
+              <button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
+              <span style={{fontWeight:500,fontSize:15}}>{titles[screen]}</span>
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:"40px 20px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              <div style={{fontSize:32,marginBottom:12}}>🚧</div>
+              <div style={{fontSize:14,color:"#aaa",textAlign:"center"}}>콘텐츠를 준비 중이에요</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 공유 복사 토스트 */}
       {shareModal&&(()=>{
         const{type,post}=shareModal;
@@ -1884,6 +1903,38 @@ export default function App(){
           <button onClick={()=>{localStorage.setItem('pushDismissed','1');setShowPushModal(false);}} style={{width:"100%",height:44,borderRadius:14,border:"none",background:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>나중에</button>
         </div>
       </div>)}
+
+      {/* 앱 메뉴 바텀 시트 */}
+      {showAppMenu&&(
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setShowAppMenu(false)}>
+          <div style={{background:"#fff",borderRadius:"20px 20px 0 0",width:"100%",boxSizing:"border-box",paddingBottom:"calc(16px + env(safe-area-inset-bottom,0px))"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:36,height:4,borderRadius:2,background:"#e0e0e0",margin:"14px auto 18px"}}/>
+            {[
+              {icon:"ti-info-circle",  label:"공쓰재 소개",      action:()=>{go("appinfo");setShowAppMenu(false);}},
+              {icon:"ti-book",         label:"이용 안내",         action:()=>{go("guide");setShowAppMenu(false);}},
+              {icon:"ti-speakerphone", label:"공지사항",          action:()=>{go("notice");setShowAppMenu(false);}},
+              {icon:"ti-mail",         label:"문의하기",          action:()=>{go("contact");setShowAppMenu(false);}},
+              {divider:true},
+              {icon:"ti-file-text",   label:"이용약관",          action:()=>{go("terms");setShowAppMenu(false);}},
+              {icon:"ti-shield",       label:"개인정보처리방침",  action:()=>{go("privacy");setShowAppMenu(false);}},
+              {divider:true},
+              {icon:"ti-brand-facebook",  label:"페이스북",      action:()=>{window.open("https://www.facebook.com/twr.or.kr","_blank");setShowAppMenu(false);}},
+              {icon:"ti-brand-instagram", label:"인스타그램",     disabled:true, action:()=>{}},
+            ].map((item,i)=>
+              item.divider
+                ?<div key={i} style={{height:"0.5px",background:DIVIDER,margin:"4px 0"}}/>
+                :<div key={i} onClick={item.disabled?undefined:item.action}
+                   style={{display:"flex",alignItems:"center",gap:14,padding:"13px 20px",cursor:item.disabled?"default":"pointer",opacity:item.disabled?0.35:1}}>
+                    <div style={{width:34,height:34,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <i className={`ti ${item.icon}`} style={{fontSize:18,color:ACCENT}}/>
+                    </div>
+                    <span style={{fontSize:14,color:"#1a1a1a"}}>{item.label}</span>
+                    {!item.disabled&&<i className="ti ti-chevron-right" style={{fontSize:15,color:"#ccc",marginLeft:"auto"}}/>}
+                 </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 하단 네비게이션 */}
       {screen!=="admin"&&(<div style={{position:"absolute",bottom:0,left:0,right:0,background:"#fff",borderTop:"0.5px solid #f0f0f0",display:"flex",alignItems:"center",zIndex:50,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>
