@@ -1767,15 +1767,96 @@ export default function App(){
       {/* 앱 정보 화면들 */}
       {["appinfo","guide","notice","contact","terms","privacy"].includes(screen)&&(()=>{
         const titles={appinfo:"공쓰재 소개",guide:"이용 안내",notice:"공지사항",contact:"문의하기",terms:"이용약관",privacy:"개인정보처리방침"};
+        const Art=({t,children})=>(
+          <div style={{marginBottom:24}}>
+            <div style={{fontWeight:700,fontSize:14,color:"#1a1a1a",marginBottom:7,paddingBottom:5,borderBottom:`1px solid ${DIVIDER}`}}>{t}</div>
+            <div style={{fontSize:13,color:"#444",lineHeight:1.9}}>{children}</div>
+          </div>
+        );
+        const Br=()=><br/>;
+        const termsContent=(
+          <div style={{padding:"20px 20px 120px"}}>
+            <div style={{fontSize:11,color:"#aaa",marginBottom:22,paddingBottom:14,borderBottom:`1px solid ${DIVIDER}`}}>
+              시행일: 2026년 6월 19일 · 운영: (주)스탭서울
+            </div>
+            <Art t="제1조 (목적)">
+              이 약관은 (주)스탭서울(이하 "회사")이 운영하는 공쓰재 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 관계를 규정함을 목적으로 합니다.
+            </Art>
+            <Art t="제2조 (정의)">
+              ① "서비스"란 공연·문화예술 분야의 소품·의상·장비 등 물품 나눔 및 거래, 일자리 정보 공유, 공간 연결(준비 중) 등을 위한 공쓰재 플랫폼을 말합니다.<Br/>
+              ② "회원"이란 이 약관에 동의하고 회원가입을 완료한 자를 말합니다.<Br/>
+              ③ "게시물"이란 회원이 서비스에 등록한 물품 정보·사진·일자리 공고·채팅 메시지 등 일체의 정보를 말합니다.
+            </Art>
+            <Art t="제3조 (약관의 효력 및 변경)">
+              ① 이 약관은 서비스를 이용하는 모든 회원에게 적용됩니다.<Br/>
+              ② 회사는 관련 법령에 위배되지 않는 범위에서 약관을 변경할 수 있으며, 변경 시 서비스 내 공지를 통해 시행 7일 전에 고지합니다.<Br/>
+              ③ 고지 후 7일 이내에 이의를 제기하지 않으면 변경 약관에 동의한 것으로 봅니다.
+            </Art>
+            <Art t="제4조 (회원가입 및 계정)">
+              ① 회원가입은 이름·전화번호·이메일 등 필수 정보를 입력하고 본 약관에 동의함으로써 완료됩니다.<Br/>
+              ② 회원은 본인 정보만 등록할 수 있으며, 타인 정보를 도용하거나 허위 정보를 입력해서는 안 됩니다.<Br/>
+              ③ 계정의 보안 관리 책임은 회원 본인에게 있습니다.<Br/>
+              ④ 회원은 언제든지 서비스 내 MY → 설정 메뉴에서 회원 탈퇴를 요청할 수 있습니다.
+            </Art>
+            <Art t="제5조 (서비스 이용)">
+              ① 비회원은 등록된 게시물을 열람할 수 있으나, 글쓰기·채팅·찜 등의 기능은 회원 가입 후 이용 가능합니다.<Br/>
+              ② 서비스는 인터넷 연결이 필요하며, 회사는 서비스 품질 향상 또는 운영상의 이유로 서비스를 변경·중단할 수 있습니다.
+            </Art>
+            <Art t="제6조 (게시물 및 거래 책임)">
+              ① 공쓰재는 회원 간 나눔·거래를 연결하는 중개 플랫폼입니다. 실제 거래·나눔의 당사자는 판매자·나누미 회원과 구매자·구하미 회원 본인이며, 회사는 거래 당사자가 아닙니다.<Br/>
+              ② 회사는 회원 간 거래 과정에서 발생하는 분쟁·손해에 대해 법령에서 정한 경우를 제외하고 책임을 지지 않습니다.<Br/>
+              ③ 회원은 게시물의 정확성·적법성에 책임을 지며, 타인의 저작권이나 권리를 침해하는 내용을 게시해서는 안 됩니다.<Br/>
+              ④ 게시물의 저작권은 해당 회원에게 있으며, 회사는 서비스 운영 목적 범위에서 게시물을 노출·활용할 수 있습니다.
+            </Art>
+            <Art t="제7조 (금지 행위)">
+              회원은 다음 행위를 해서는 안 됩니다.<Br/>
+              · 불법 물품·저작권 침해물 거래 또는 게시<Br/>
+              · 사기, 허위 정보 게시, 가격 조작<Br/>
+              · 타인에 대한 욕설·혐오·차별적 표현<Br/>
+              · 스팸 메시지, 광고 도배, 반복적 도발<Br/>
+              · 타인의 개인정보 무단 수집·이용<Br/>
+              · 서비스 운영 또는 서버를 방해하는 일체의 행위
+            </Art>
+            <Art t="제8조 (게시물 삭제 및 계정 제한)">
+              ① 회사는 제7조 금지 행위에 해당하거나 서비스 운영 정책을 위반하는 게시물을 예고 없이 삭제할 수 있습니다.<Br/>
+              ② 회사는 위반 정도에 따라 회원의 서비스 이용을 일시 정지하거나 계정을 영구 정지할 수 있습니다.<Br/>
+              ③ 계정 정지에 이의가 있는 경우 운영팀 이메일로 이의 신청할 수 있습니다.
+            </Art>
+            <Art t="제9조 (면책)">
+              ① 회사는 회원 간 거래·나눔에서 발생하는 분쟁에 대해 중재 의무를 지지 않습니다.<Br/>
+              ② 천재지변, 서버 장애, 네트워크 문제 등 불가항력적 사유로 인한 서비스 중단에 대해 책임을 지지 않습니다.<Br/>
+              ③ 회원이 게시한 정보의 정확성·신뢰성에 대해 회사는 보증하지 않습니다.
+            </Art>
+            <Art t="제10조 (분쟁 해결 및 준거법)">
+              ① 이 약관은 대한민국 법령에 따라 해석됩니다.<Br/>
+              ② 서비스 이용과 관련한 분쟁의 관할 법원은 민사소송법에 따른 관할 법원으로 합니다.
+            </Art>
+            <Art t="제11조 (운영자 연락처)">
+              회사명: (주)스탭서울<Br/>
+              서비스명: 공쓰재<Br/>
+              이메일: z@staffseoul.com
+            </Art>
+            <div style={{marginTop:8,padding:"12px 14px",background:"#f9f9f9",borderRadius:10,fontSize:11,color:"#aaa",lineHeight:1.7}}>
+              ※ 이 약관은 초안이며, 정식 법률 검토를 거쳐 확정됩니다.<Br/>
+              부칙: 이 약관은 2026년 6월 19일부터 시행합니다.
+            </div>
+          </div>
+        );
+        const placeholder=(
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:40}}>
+            <div style={{fontSize:32,marginBottom:12}}>🚧</div>
+            <div style={{fontSize:14,color:"#aaa",textAlign:"center"}}>콘텐츠를 준비 중이에요</div>
+          </div>
+        );
+        const bodyContents={terms:termsContent};
         return(
           <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
             <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
               <button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button>
               <span style={{fontWeight:500,fontSize:15}}>{titles[screen]}</span>
             </div>
-            <div style={{flex:1,overflowY:"auto",padding:"40px 20px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-              <div style={{fontSize:32,marginBottom:12}}>🚧</div>
-              <div style={{fontSize:14,color:"#aaa",textAlign:"center"}}>콘텐츠를 준비 중이에요</div>
+            <div style={{flex:1,overflowY:"auto"}}>
+              {bodyContents[screen]||placeholder}
             </div>
           </div>
         );
