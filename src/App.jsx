@@ -46,7 +46,7 @@ const shellStyle=isMobile
     ?{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",overflow:"hidden",background:BG,height:"100vh",position:"relative"}
     :{width:"100%",maxWidth:390,margin:"0 auto",fontFamily:"sans-serif",border:`1px solid ${DIVIDER}`,borderRadius:24,overflow:"hidden",background:BG,height:700,position:"relative"};
 const emptyForm={title:"",category:[],itemName:"",price:"",desc:"",region:"",contact:"",safeNum:false,tradePlace:"",tradeLat:null,tradeLng:null,photos:[],status:"selling",postType:"nanumi",showTag:"",showEndDate:"",listingMode:"nanumi"};
-const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active"};
+const emptyJform={title:"",org:"",field:"조명",type:"단기",pay:"",date:"",desc:"",location:"",jobType:"guin",jobStatus:"active",photos:[]};
 
 function RegionPicker({open,onChange,onClose}){
   const [step,setStep]=useState("metro");
@@ -283,6 +283,7 @@ export default function App(){
   const [showSearch,setShowSearch]=useState(false);
   const [photoIdx,setPhotoIdx]=useState(0);
   const [cropQueue,setCropQueue]=useState([]);
+  const [cropTarget,setCropTarget]=useState("item"); // "item" | "job"
   const [cropSrc,setCropSrc]=useState(null);
   const [cropPx,setCropPx]=useState({x:0,y:0,width:0,height:0});
   const [cropZoom,setCropZoom]=useState(1);
@@ -727,12 +728,12 @@ export default function App(){
 
   // base64 data URL → Firebase Storage 업로드 → https:// URL 반환.
   // 이미 https:// 이면 재업로드 없이 그대로 반환 (수정 시 기존 사진 보존).
-  async function uploadPhotosToStorage(photos,docId){
+  async function uploadPhotosToStorage(photos,docId,prefix="items"){
     if(!photos?.length)return[];
     return Promise.all(photos.map(async(photo,i)=>{
       if(photo.startsWith("https://"))return photo;
       const blob=await(await fetch(photo)).blob();
-      const sRef=storageRef(storage,`items/${docId}/${i}_${Date.now()}.jpg`);
+      const sRef=storageRef(storage,`${prefix}/${docId}/${i}_${Date.now()}.jpg`);
       await uploadBytes(sRef,blob);
       return getDownloadURL(sRef);
     }));
@@ -833,10 +834,23 @@ export default function App(){
     if(!jform.title){showFormError("공고 제목을 입력해주세요");return;}
     if(!currentUser)return;
     const wasEditing=!!editJob;
-    const data={...jform,org:jform.org||userProfile?.affiliation||userProfile?.name||"나",icon:editJob?.icon||"📋",sellerId:currentUser.uid};
+    const {photos:rawPhotos,...jformRest}=jform;
+    const data={...jformRest,org:jformRest.org||userProfile?.affiliation||userProfile?.name||"나",icon:editJob?.icon||"📋",sellerId:currentUser.uid};
     try{
-      if(editJob){await updateDoc(doc(db,"jobs",editJob.id),{...data,createdAt:editJob.createdAt});setSelJob({...data,id:editJob.id});}
-      else{await addDoc(collection(db,"jobs"),{...data,createdAt:serverTimestamp()});}
+      if(editJob){
+        let photos;
+        try{photos=await uploadPhotosToStorage(rawPhotos,editJob.id,"jobs");}
+        catch(e){console.error("[submitJob] 사진 업로드 실패:",e);showFormError("사진 업로드에 실패했어요. 다시 시도해주세요.");return;}
+        const updated={...data,photos,createdAt:editJob.createdAt};
+        await updateDoc(doc(db,"jobs",editJob.id),updated);
+        setSelJob({...updated,id:editJob.id});
+      }else{
+        const newRef=doc(collection(db,"jobs"));
+        let photos;
+        try{photos=await uploadPhotosToStorage(rawPhotos,newRef.id,"jobs");}
+        catch(e){console.error("[submitJob] 사진 업로드 실패:",e);showFormError("사진 업로드에 실패했어요. 다시 시도해주세요.");return;}
+        await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});
+      }
     }catch(e){
       console.error("[submitJob]",e);
       showFormError("저장에 실패했어요. 다시 시도해주세요.");
@@ -846,15 +860,16 @@ export default function App(){
     setTimeout(()=>{setPosted(false);if(wasEditing){go("jobdetail");}else{setMainTab("jobs");goHome();}},1200);
   }
 
-  function startEditJob(job){setJform({title:job.title,org:job.org||"",field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active"});setEditJob(job);setPostMode("job");go("post","post");}
+  function startEditJob(job){setJform({title:job.title,org:job.org||"",field:job.field,type:job.type,pay:job.pay,date:job.date,desc:job.desc,location:job.location,jobType:job.jobType||"guin",jobStatus:job.jobStatus||"active",photos:job.photos||[]});setEditJob(job);setPostMode("job");go("post","post");}
   async function changeJobStatus(id,s){await updateDoc(doc(db,"jobs",id),{jobStatus:s});setSelJob(p=>p?{...p,jobStatus:s}:p);}
   async function toggleCat(c){setForm(p=>({...p,category:p.category.includes(c)?p.category.filter(x=>x!==c):[...p.category,c]}));}
-  function handlePhotos(e){
+  function handlePhotos(e,target="item"){
     const files=Array.from(e.target.files);
     if(!files.length)return;
     e.target.value="";
     const readers=files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);}));
     Promise.all(readers).then(srcs=>{
+      setCropTarget(target);
       setCropQueue(srcs);
       setCropSrc(srcs[0]);
       setCropZoom(1);setCropPos({x:0,y:0});setCropRotation(0);
@@ -863,7 +878,8 @@ export default function App(){
   async function handleCropConfirm(){
     try{
       const dataUrl=await getCroppedImg(cropSrc,cropPx,cropRotation);
-      setForm(p=>({...p,photos:[...p.photos,dataUrl]}));
+      if(cropTarget==="job") setJform(p=>({...p,photos:[...(p.photos||[]),dataUrl]}));
+      else setForm(p=>({...p,photos:[...p.photos,dataUrl]}));
     }catch(e){console.error("[crop]",e);}
     const remaining=cropQueue.slice(1);
     setCropQueue(remaining);
@@ -914,6 +930,14 @@ export default function App(){
     await deleteDoc(doc(db,"items",id));
   }
   async function deleteJob(id){
+    const job=jobs.find(j=>j.id===id);
+    if(job?.photos?.length){
+      await Promise.allSettled(job.photos.map(url=>{
+        const path=storagePathFromUrl(url);
+        if(!path)return Promise.resolve();
+        return deleteObject(storageRef(storage,path));
+      }));
+    }
     try{
       const chatSnap=await getDocs(query(collection(db,"chats"),where("itemId","==",id)));
       await Promise.allSettled(chatSnap.docs.map(d=>
@@ -1438,9 +1462,10 @@ export default function App(){
           </div>}
           {mainTab==="jobs"&&filtJobs.map(job=>{const fs=jfs(job.field);const isGujik=job.jobType==="gujik";return(<div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");window.location.hash=`#/job/${job.id}`;}} style={{padding:"14px 16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1,background:BG}}>
             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-              <div style={{width:96,height:96,borderRadius:16,background:fs.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,flexShrink:0}}>
-                <i className={`ti ${fs.icon}`} style={{fontSize:26,color:"#fff"}}/>
-                <span style={{fontSize:11,color:"#fff",fontWeight:600,letterSpacing:0.3}}>{job.field}</span>
+              <div style={{width:96,height:96,borderRadius:16,overflow:"hidden",flexShrink:0,position:"relative"}}>
+                {job.photos?.length>0
+                  ?<img src={job.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                  :<div style={{width:"100%",height:"100%",background:fs.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}><i className={`ti ${fs.icon}`} style={{fontSize:26,color:"#fff"}}/><span style={{fontSize:11,color:"#fff",fontWeight:600,letterSpacing:0.3}}>{job.field}</span></div>}
               </div>
               <div style={{flex:1,minWidth:0,paddingTop:2}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,flexWrap:"wrap"}}>
@@ -1615,6 +1640,8 @@ export default function App(){
                 <span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:"rgba(255,255,255,0.2)",color:"#fff",fontWeight:500}}>{selJob.type}</span>
               </div>
             </div>
+            {/* 사진 갤러리 (있을 때만) */}
+            {selJob.photos?.length>0&&<div style={{display:"flex",gap:6,overflowX:"auto",padding:"12px 16px",background:"#fff",borderBottom:`0.5px solid ${DIVIDER}`}}>{selJob.photos.map((ph,i)=>(<img key={i} src={ph} style={{height:160,width:"auto",borderRadius:10,objectFit:"cover",flexShrink:0}} alt=""/>))}</div>}
             <div style={{padding:"16px 16px 0"}}>
               {/* 제목 */}
               <div style={{fontSize:20,fontWeight:700,color:"#1a1a1a",marginBottom:16,lineHeight:1.3}}>{selJob.title}</div>
@@ -1705,6 +1732,7 @@ export default function App(){
             </>
           ):(
             <>
+              <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>사진 <span style={{color:"#bbb",fontWeight:400}}>(선택, 최대 5장)</span></div><div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>{(jform.photos||[]).length<5&&<label style={{width:72,height:72,borderRadius:12,border:`1.5px dashed ${MID}`,background:LIGHT,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}><i className="ti ti-camera" style={{fontSize:22,color:ACCENT}}/><span style={{fontSize:10,color:ACCENT,marginTop:2}}>추가</span><input type="file" accept="image/*" multiple onChange={e=>handlePhotos(e,"job")} style={{display:"none"}}/></label>}{(jform.photos||[]).map((ph,i)=>(<div key={i} style={{position:"relative",flexShrink:0}}><img src={ph} style={{width:72,height:72,borderRadius:12,objectFit:"cover"}} alt=""/><button onClick={()=>setJform(p=>({...p,photos:(p.photos||[]).filter((_,j)=>j!==i)}))} style={{position:"absolute",top:-4,right:-4,width:18,height:18,borderRadius:"50%",background:"#333",border:"none",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>))}</div></div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:6,fontWeight:500}}>구인 / 구직</div><div style={{display:"flex",gap:8}}>{[["guin","구인","#e8f4fd","#1565c0"],["gujik","구직","#f3e5f5","#6a1b9a"]].map(([k,l,bg,color])=>(<button key={k} onClick={()=>setJform(p=>({...p,jobType:k}))} style={{flex:1,padding:"10px 0",borderRadius:12,border:`1.5px solid ${jform.jobType===k?color:"#e0e0e0"}`,background:jform.jobType===k?bg:"#fff",color:jform.jobType===k?color:"#aaa",fontSize:13,fontWeight:jform.jobType===k?600:400,cursor:"pointer"}}>{l}</button>))}</div></div>
               {[{l:"공고 제목",k:"title",ph:"예: 조명 디자이너 구합니다"},{l:"단체/기관명",k:"org",ph:"예: 극단 파도"},{l:"기간",k:"date",ph:"예: 2025.07.01~07.10"},{l:"보수",k:"pay",ph:"예: 협의 / 일 80,000원",ml:50}].map(f=>(<div key={f.k} style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>{f.l}</div><input value={jform[f.k]||""} onChange={e=>setJform(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} maxLength={f.ml||undefined} style={inp}/></div>))}
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>지역</div><div style={{position:"relative"}}><input value={jform.location||""} readOnly onClick={()=>setShowJR(v=>!v)} placeholder="지역 선택" style={{...inp,cursor:"pointer"}}/><RegionPicker open={showJR} onChange={v=>setJform(p=>({...p,location:v}))} onClose={()=>setShowJR(false)}/></div></div>
