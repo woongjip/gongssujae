@@ -1379,7 +1379,13 @@ export default function App(){
             <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>극장·연습실·전시장을 나누고 빌리는<br/>공간 기능이 준비 중이에요.<br/>공연에 쓸 공간이 필요하거나<br/>비는 시간을 나누고 싶다면 곧 만날 수 있어요.</div>
             <div style={{marginTop:28,padding:"10px 20px",borderRadius:20,background:LIGHT,color:TAB_SPACE,fontSize:13,fontWeight:500}}>준비 중</div>
           </div>)}
-          {items.length===0&&mainTab==="items"&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 물건이 없어요<br/><span style={{fontSize:12}}>첫 번째 물건을 올려보세요!</span></div>}
+          {mainTab==="items"&&items.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 물건이 없어요<br/><span style={{fontSize:12}}>첫 번째 물건을 올려보세요!</span></div>}
+          {mainTab==="items"&&items.length>0&&filtItems.length===0&&<div style={{textAlign:"center",color:"#bbb",marginTop:60,padding:"0 32px"}}>
+            <div style={{fontSize:22,marginBottom:10}}>🔍</div>
+            <div style={{fontSize:14,color:"#999",fontWeight:500,marginBottom:6}}>검색 결과가 없어요</div>
+            <div style={{fontSize:12,color:"#bbb",marginBottom:20}}>다른 검색어나 카테고리를 시도해보세요</div>
+            <button onClick={()=>{setQ("");setCat("전체");}} style={{padding:"8px 20px",borderRadius:20,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:13,cursor:"pointer",fontWeight:500}}>검색 초기화</button>
+          </div>}
           {mainTab==="items"&&filtItems.map(item=>{
             const isLocal=localFirst&&userProfile?.preferredRegion&&item.region?.startsWith(userProfile.preferredRegion.split(" ")[0]);
             const isNanumi=item.postType==="nanumi"&&item.price===0;
@@ -1419,6 +1425,12 @@ export default function App(){
             </div>);
           })}
           {mainTab==="jobs"&&jobs.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>아직 등록된 공고가 없어요</div>}
+          {mainTab==="jobs"&&jobs.length>0&&filtJobs.length===0&&<div style={{textAlign:"center",color:"#bbb",marginTop:60,padding:"0 32px"}}>
+            <div style={{fontSize:22,marginBottom:10}}>🔍</div>
+            <div style={{fontSize:14,color:"#999",fontWeight:500,marginBottom:6}}>검색 결과가 없어요</div>
+            <div style={{fontSize:12,color:"#bbb",marginBottom:20}}>다른 검색어나 분야를 시도해보세요</div>
+            <button onClick={()=>{setQ("");setFld("전체");}} style={{padding:"8px 20px",borderRadius:20,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:13,cursor:"pointer",fontWeight:500}}>검색 초기화</button>
+          </div>}
           {mainTab==="jobs"&&filtJobs.map(job=>{const fs=jfs(job.field);const isGujik=job.jobType==="gujik";return(<div key={job.id} onClick={()=>{setSelJob(job);go("jobdetail");window.location.hash=`#/job/${job.id}`;}} style={{padding:"14px 16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",opacity:job.jobStatus==="done"?0.55:1,background:BG}}>
             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
               <div style={{width:96,height:96,borderRadius:16,background:fs.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,flexShrink:0}}>
