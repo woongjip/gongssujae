@@ -5,7 +5,7 @@ import {
   registerFCMToken, unregisterFCMToken, requestAndRegisterFCM, logEvent,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
-  setDoc, getDoc, where, increment, arrayUnion, arrayRemove,
+  setDoc, getDoc, getDocs, where, increment, arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification,
   deleteField
@@ -895,20 +895,23 @@ export default function App(){
     }
     // itemPrivate 삭제
     await deleteDoc(doc(db,"itemPrivate",id)).catch(()=>{});
-    // 연결된 채팅 soft-delete (leftBy)
-    const relatedChats=chatRooms.filter(r=>r.itemId===id);
-    await Promise.allSettled(relatedChats.map(r=>
-      updateDoc(doc(db,"chats",r.id),{leftBy:arrayUnion(currentUser?.uid)})
-    ));
+    // 연결된 채팅 soft-delete (leftBy) — chatRooms 상태 대신 직접 쿼리
+    try{
+      const chatSnap=await getDocs(query(collection(db,"chats"),where("itemId","==",id)));
+      await Promise.allSettled(chatSnap.docs.map(d=>
+        updateDoc(d.ref,{leftBy:arrayUnion(currentUser?.uid)})
+      ));
+    }catch(e){console.warn("[deleteItem] 채팅 soft-delete 실패:",e);}
     // 본문 삭제
     await deleteDoc(doc(db,"items",id));
   }
   async function deleteJob(id){
-    // 연결된 채팅 soft-delete
-    const relatedChats=chatRooms.filter(r=>r.itemId===id);
-    await Promise.allSettled(relatedChats.map(r=>
-      updateDoc(doc(db,"chats",r.id),{leftBy:arrayUnion(currentUser?.uid)})
-    ));
+    try{
+      const chatSnap=await getDocs(query(collection(db,"chats"),where("itemId","==",id)));
+      await Promise.allSettled(chatSnap.docs.map(d=>
+        updateDoc(d.ref,{leftBy:arrayUnion(currentUser?.uid)})
+      ));
+    }catch(e){console.warn("[deleteJob] 채팅 soft-delete 실패:",e);}
     await deleteDoc(doc(db,"jobs",id));
   }
   async function hideItem(id,hide){await updateDoc(doc(db,"items",id),{hidden:hide});}
