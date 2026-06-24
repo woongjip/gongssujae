@@ -85,7 +85,7 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
 
-      allow delete: if false;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // chats: read는 chatId 기반(list 쿼리 안정), write는 participants 기반

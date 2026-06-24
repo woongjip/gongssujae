@@ -11,7 +11,7 @@ import {
   sendPasswordResetEmail, sendEmailVerification
 } from "firebase/auth";
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAnalytics, logEvent as _logEvent, isSupported as isAnalyticsSupported } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -39,7 +39,7 @@ isAnalyticsSupported().then(ok => {
 export function logEvent(name, params) {
   if (_analytics) try { _logEvent(_analytics, name, params); } catch (_) {}
 }
-export { storageRef, uploadBytes, getDownloadURL };
+export { storageRef, uploadBytes, getDownloadURL, deleteObject };
 
 export const VAPID_KEY = "BCgJza_FMPGfPIr977rEmVY1bQR06sb8p5gPmyc5tMe5_OUzR6fMWN7IpOdCYFmIUPUMIeEzQz2paKo3xGd-kYY";
 

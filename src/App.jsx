@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, Fragment, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import {
-  db, auth, storage, storageRef, uploadBytes, getDownloadURL,
+  db, auth, storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
   registerFCMToken, unregisterFCMToken, requestAndRegisterFCM, logEvent,
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
@@ -12,6 +12,7 @@ import {
 } from "./firebase";
 
 const ACCENT="#228BB5",LIGHT="#E3F3F9",MID="#3DA1B2",ADMIN_C="#1a237e";
+function storagePathFromUrl(url){try{const m=url.match(/\/o\/(.+?)(?:\?|$)/);return m?decodeURIComponent(m[1]):null;}catch{return null;}}
 const NO_SHOW=["공연없음","없음","공연 없음","없음","none","없"];
 const hasShowTag=t=>t&&!NO_SHOW.includes(t.trim());
 const BG="#FAFAF8",DIVIDER="#EDEAE5";
@@ -882,8 +883,34 @@ export default function App(){
     setReportModal(null);setReportReason("");setReportDetail("");
     setReportToast(true);setTimeout(()=>setReportToast(false),3000);
   }
-  async function deleteItem(id){await deleteDoc(doc(db,"items",id));}
-  async function deleteJob(id){await deleteDoc(doc(db,"jobs",id));}
+  async function deleteItem(id){
+    const item=items.find(i=>i.id===id);
+    // Storage 사진 삭제 (실패해도 계속)
+    if(item?.photos?.length){
+      await Promise.allSettled(item.photos.map(url=>{
+        const path=storagePathFromUrl(url);
+        if(!path)return Promise.resolve();
+        return deleteObject(storageRef(storage,path));
+      }));
+    }
+    // itemPrivate 삭제
+    await deleteDoc(doc(db,"itemPrivate",id)).catch(()=>{});
+    // 연결된 채팅 soft-delete (leftBy)
+    const relatedChats=chatRooms.filter(r=>r.itemId===id);
+    await Promise.allSettled(relatedChats.map(r=>
+      updateDoc(doc(db,"chats",r.id),{leftBy:arrayUnion(currentUser?.uid)})
+    ));
+    // 본문 삭제
+    await deleteDoc(doc(db,"items",id));
+  }
+  async function deleteJob(id){
+    // 연결된 채팅 soft-delete
+    const relatedChats=chatRooms.filter(r=>r.itemId===id);
+    await Promise.allSettled(relatedChats.map(r=>
+      updateDoc(doc(db,"chats",r.id),{leftBy:arrayUnion(currentUser?.uid)})
+    ));
+    await deleteDoc(doc(db,"jobs",id));
+  }
   async function hideItem(id,hide){await updateDoc(doc(db,"items",id),{hidden:hide});}
   async function hideJob(id,hide){await updateDoc(doc(db,"jobs",id),{hidden:hide});}
   async function updateReport(id,status){await updateDoc(doc(db,"reports",id),{status});}
@@ -1017,7 +1044,7 @@ export default function App(){
   const unreadMsgCount=useMemo(()=>{
     const uid=currentUser?.uid;
     if(!uid)return 0;
-    return chatRooms.reduce((sum,r)=>{
+    return chatRooms.filter(r=>!r.leftBy?.includes(uid)).reduce((sum,r)=>{
       if(r.id===activeChat&&screen==="chat")return sum;
       return sum+(r.unreadCount?.[uid]||0);
     },0);
@@ -1632,7 +1659,7 @@ export default function App(){
       </div>)}
 
       {/* 채팅 목록 */}
-      {screen==="chatlist"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG}}><div style={{padding:"20px 16px 14px",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}><div style={{fontSize:18,fontWeight:500}}>채팅</div></div><div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>{chatRooms.length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>채팅이 없습니다<br/><span style={{fontSize:12}}>물건 상세에서 채팅을 시작하세요</span></div>}{chatRooms.map(room=>{const linked=items.find(i=>i.id===room.itemId)||jobs.find(j=>j.id===room.itemId);const thumb=linked?.photos?.[0];const price=linked?.price!=null?(linked.price===0?(linked.postType==="guhami"?"가격 협의":"무료 나눔"):`${linked.price.toLocaleString()}원`):null;const uid=currentUser?.uid;const myLastRead=uid?room?.lastRead?.[uid]:null;const isUnread=room.lastMessage&&(myLastRead?(room.updatedAt?.seconds||0)>(myLastRead?.seconds||0):(room.updatedAt?.seconds||0)*1000>parseInt(localStorage.getItem(`chatRead_${room.id}`)||"0"));return(<div key={room.id} onClick={()=>{setActiveChat(room.id);setChatLabel(room.itemTitle||"채팅");go("chat","chatlist");}} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer",alignItems:"center",background:isUnread?"#EBF5FB":"#fff"}}><div style={{position:"relative",flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,background:LIGHT,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{thumb?<img src={thumb} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:(linked?.icon||"💬")}</div>{isUnread&&<div style={{position:"absolute",top:-3,right:-3,width:10,height:10,borderRadius:"50%",background:"#e25",border:"2px solid #fff"}}/>}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:isUnread?600:500,marginBottom:1}}>{room.itemTitle||"채팅"}</div>{price&&<div style={{fontSize:11,color:ACCENT,fontWeight:500,marginBottom:2}}>{price}</div>}</div><div style={{fontSize:11,color:"#bbb",flexShrink:0,marginLeft:6}}>{room.updatedAt?.toDate?.()?.toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})||""}</div></div><div style={{fontSize:12,color:isUnread?"#333":"#999",fontWeight:isUnread?500:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{room.lastMessage||"새 채팅"}</div></div></div>);})}</div></div>)}
+      {screen==="chatlist"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG}}><div style={{padding:"20px 16px 14px",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}><div style={{fontSize:18,fontWeight:500}}>채팅</div></div><div style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))"}}>{chatRooms.filter(r=>!r.leftBy?.includes(currentUser?.uid)).length===0&&<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>채팅이 없습니다<br/><span style={{fontSize:12}}>물건 상세에서 채팅을 시작하세요</span></div>}{chatRooms.filter(r=>!r.leftBy?.includes(currentUser?.uid)).map(room=>{const linked=items.find(i=>i.id===room.itemId)||jobs.find(j=>j.id===room.itemId);const thumb=linked?.photos?.[0];const price=linked?.price!=null?(linked.price===0?(linked.postType==="guhami"?"가격 협의":"무료 나눔"):`${linked.price.toLocaleString()}원`):null;const uid=currentUser?.uid;const myLastRead=uid?room?.lastRead?.[uid]:null;const isUnread=room.lastMessage&&(myLastRead?(room.updatedAt?.seconds||0)>(myLastRead?.seconds||0):(room.updatedAt?.seconds||0)*1000>parseInt(localStorage.getItem(`chatRead_${room.id}`)||"0"));return(<div key={room.id} onClick={()=>{setActiveChat(room.id);setChatLabel(room.itemTitle||"채팅");go("chat","chatlist");}} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer",alignItems:"center",background:isUnread?"#EBF5FB":"#fff"}}><div style={{position:"relative",flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,background:LIGHT,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{thumb?<img src={thumb} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:(linked?.icon||"💬")}</div>{isUnread&&<div style={{position:"absolute",top:-3,right:-3,width:10,height:10,borderRadius:"50%",background:"#e25",border:"2px solid #fff"}}/>}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:isUnread?600:500,marginBottom:1}}>{room.itemTitle||"채팅"}</div>{price&&<div style={{fontSize:11,color:ACCENT,fontWeight:500,marginBottom:2}}>{price}</div>}</div><div style={{fontSize:11,color:"#bbb",flexShrink:0,marginLeft:6}}>{room.updatedAt?.toDate?.()?.toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})||""}</div></div><div style={{fontSize:12,color:isUnread?"#333":"#999",fontWeight:isUnread?500:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{room.lastMessage||"새 채팅"}</div></div></div>);})}</div></div>)}
 
       {/* 채팅 */}
       {screen==="chat"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",boxSizing:"border-box",background:BG}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={()=>go("chatlist","chatlist")} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{chatLabel}</div><div style={{fontSize:11,color:"#aaa"}}>채팅</div></div></div>{activeChatLinked&&<div onClick={()=>{if(items.find(i=>i.id===activeChatLinked.id))goDetail(activeChatLinked);else{setSelJob(activeChatLinked);go("jobdetail","chat");window.location.hash=`#/job/${activeChatLinked.id}`;}}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:"0.5px solid #f0f0f0",background:"#fafafa",cursor:"pointer",flexShrink:0}}>{activeChatLinked.photos?.[0]?<img src={activeChatLinked.photos[0]} style={{width:40,height:40,borderRadius:8,objectFit:"cover",flexShrink:0}} alt=""/>:<div style={{width:40,height:40,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{activeChatLinked.icon||"📦"}</div>}<div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{activeChatLinked.title}</div>{activeChatLinked.price!=null&&<div style={{fontSize:11,color:ACCENT,fontWeight:500,marginTop:1}}>{activeChatLinked.price===0?(activeChatLinked.postType==="guhami"?"가격 협의":"무료 나눔"):`${activeChatLinked.price.toLocaleString()}원`}</div>}</div><i className="ti ti-chevron-right" style={{fontSize:14,color:"#ccc",flexShrink:0}}/></div>}<div style={{flex:1,minHeight:0,overflowY:"auto",padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>{messages.map((msg,i)=>{const isMe=msg.from==="me";const prev=messages[i-1];const next=messages[i+1];const d=msg.createdAt?.toDate?.();const pd=prev?.createdAt?.toDate?.();const nd=next?.createdAt?.toDate?.();const showDate=d&&(!pd||d.toDateString()!==pd.toDateString());const sameMinNext=nd&&d&&nd.getFullYear()===d.getFullYear()&&nd.getMonth()===d.getMonth()&&nd.getDate()===d.getDate()&&nd.getHours()===d.getHours()&&nd.getMinutes()===d.getMinutes()&&next.from===msg.from;const showTime=d&&!sameMinNext;return(<Fragment key={msg.id||i}>{showDate&&<div style={{textAlign:"center",margin:"8px 0"}}><span style={{fontSize:11,color:"#aaa",background:"#f0f0f0",borderRadius:10,padding:"3px 12px"}}>{fmtDateLabel(msg.createdAt)}</span></div>}<div style={{display:"flex",justifyContent:isMe?"flex-end":"flex-start"}}><div style={{maxWidth:"75%"}}>{!isMe&&<div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{msg.fromName}</div>}<div style={{display:"flex",alignItems:"flex-end",gap:4,flexDirection:isMe?"row-reverse":"row"}}>{msg.type==="contact_share"?(<div style={{padding:"12px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",background:isMe?ACCENT:"#fff",border:isMe?"none":"1.5px solid #e0e0e0",minWidth:160}}><div style={{fontSize:11,color:isMe?"rgba(255,255,255,0.75)":"#aaa",marginBottom:4,fontWeight:500}}>📞 연락처 공유</div><div style={{fontSize:16,fontWeight:700,color:isMe?"#fff":"#1a1a1a",letterSpacing:"0.5px",marginBottom:isMe?0:10}}>{msg.phone}</div>{!isMe&&<button onClick={()=>navigator.clipboard.writeText(msg.phone).then(()=>alert("복사됐어요!"))} style={{width:"100%",padding:"7px 0",borderRadius:8,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:12,fontWeight:600,cursor:"pointer"}}>복사</button>}</div>):(<div style={{padding:"10px 14px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",background:isMe?ACCENT:"#f3f3f3",color:isMe?"#fff":"#1a1a1a",fontSize:14,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{msg.text}</div>)}{showTime&&<div style={{fontSize:10,color:"#aaa",flexShrink:0,marginBottom:2}}>{fmtMsgTime(msg.createdAt)}</div>}</div></div></div></Fragment>);})}{messages.length===0&&<div style={{textAlign:"center",color:"#ccc",fontSize:13,marginTop:40}}>메시지를 보내보세요</div>}<div ref={chatEnd}/></div><div style={{flexShrink:0,padding:"10px 12px",borderTop:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",background:"#fff"}}><button onClick={sendContactShare} title="연락처 공유" style={{width:40,height:40,borderRadius:"50%",border:"none",background:LIGHT,color:ACCENT,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>📞</button><textarea value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(isMobile)return;if(e.shiftKey)return;e.preventDefault();sendMsg();}}} placeholder="메시지를 입력하세요" rows={1} style={{flex:1,borderRadius:22,border:"1px solid #e0e0e0",padding:"11px 16px",fontSize:14,outline:"none",background:"#fafafa",resize:"none",overflow:"hidden",lineHeight:1.5,fontFamily:"inherit"}}/><button onClick={sendMsg} style={{width:44,height:44,borderRadius:"50%",border:"none",background:chatMsg.trim()?ACCENT:"#ddd",color:"#fff",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-send"/></button></div></div>)}
