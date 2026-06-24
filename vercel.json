@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/open/:type/:id", "destination": "/index.html" }
+    { "source": "/open/:type/:id", "destination": "/api/og?type=:type&id=:id" }
   ]
 }

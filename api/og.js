@@ -34,10 +34,12 @@ function fetchJson(urlStr) {
     }, 5000);
 
     var req = https.get(urlStr, function(res) {
-      var body = '';
-      res.on('data', function(c) { body += c; });
+      var chunks = [];
+      res.on('data', function(c) { chunks.push(c); });
       res.on('end', function() {
         try {
+          // Buffer로 합친 뒤 UTF-8 디코딩 — 청크 경계 한글 깨짐 방지
+          var body = Buffer.concat(chunks).toString('utf8');
           done(resolve, { status: res.statusCode, data: JSON.parse(body) });
         } catch(e) {
           done(reject, e);
