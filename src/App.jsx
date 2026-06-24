@@ -499,8 +499,11 @@ export default function App(){
 
   async function handleLogin(){
     setAuthError("");setAuthBusy(true);
-    try{await signInWithEmailAndPassword(auth,email,password);}
-    catch(e){setAuthError("이메일 또는 비밀번호를 확인해주세요");}
+    try{
+      await signInWithEmailAndPassword(auth,email,password);
+      window.location.hash="";
+      goHome();
+    }catch(e){setAuthError("이메일 또는 비밀번호를 확인해주세요");}
     setAuthBusy(false);
   }
 
@@ -535,6 +538,8 @@ export default function App(){
       if(typeof Notification!=="undefined"&&Notification.permission==="default"&&!localStorage.getItem('pushDismissed')){
         setShowPushModal(true);
       }
+      window.location.hash="";
+      goHome();
     }catch(e){
       if(e.code==="auth/email-already-in-use")setAuthError("이미 사용 중인 이메일입니다");
       else setAuthError("회원가입 실패: 다시 시도해주세요");
