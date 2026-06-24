@@ -8,7 +8,7 @@ import {
 import {
   getAuth, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
-  sendPasswordResetEmail, sendEmailVerification
+  sendPasswordResetEmail, sendEmailVerification, deleteUser
 } from "firebase/auth";
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
@@ -94,5 +94,5 @@ export {
   setDoc, getDoc, where, getDocs, increment, deleteField,
   arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification,
+  onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification, deleteUser,
 };

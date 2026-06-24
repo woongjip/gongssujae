@@ -7,7 +7,7 @@ import {
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, getDocs, where, increment, arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification,
+  onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification, deleteUser,
   deleteField
 } from "./firebase";
 
@@ -261,6 +261,9 @@ export default function App(){
   const [reportReason,setReportReason]=useState("");
   const [reportDetail,setReportDetail]=useState("");
   const [reportToast,setReportToast]=useState(false);
+  const [withdrawModal,setWithdrawModal]=useState(null); // null | "confirm1" | "confirm2"
+  const [withdrawInput,setWithdrawInput]=useState("");
+  const [withdrawing,setWithdrawing]=useState(false);
   const [mypageTab,setMypageTab]=useState("info");
   const [boostToast,setBoostToast]=useState(false);
   const [showPrefR,setShowPrefR]=useState(false);
@@ -914,6 +917,40 @@ export default function App(){
     }catch(e){console.warn("[deleteJob] 채팅 soft-delete 실패:",e);}
     await deleteDoc(doc(db,"jobs",id));
   }
+  async function deleteCurrentUser(){
+    if(!currentUser)return;
+    const uid=currentUser.uid;
+    setWithdrawing(true);
+    try{
+      // 1. 내 게시글 익명화 (items·jobs)
+      const myItemsSnap=await getDocs(query(collection(db,"items"),where("sellerId","==",uid)));
+      await Promise.allSettled(myItemsSnap.docs.map(d=>updateDoc(d.ref,{seller:"탈퇴한 회원",si:"탈"})));
+      await Promise.allSettled(myItemsSnap.docs.map(d=>deleteDoc(doc(db,"itemPrivate",d.id)).catch(()=>{})));
+      const myJobsSnap=await getDocs(query(collection(db,"jobs"),where("sellerId","==",uid)));
+      await Promise.allSettled(myJobsSnap.docs.map(d=>updateDoc(d.ref,{org:"탈퇴한 회원"})));
+      // 2. 찜한 글 likedBy에서 내 uid 제거
+      await Promise.allSettled(likedItems.map(item=>updateDoc(doc(db,"items",item.id),{likedBy:arrayRemove(uid)})));
+      // 3. 채팅 soft-delete
+      const myChatsSnap=await getDocs(query(collection(db,"chats"),where("participants","array-contains",uid)));
+      await Promise.allSettled(myChatsSnap.docs.map(d=>updateDoc(d.ref,{leftBy:arrayUnion(uid)})));
+      // 4. userPrivate 삭제
+      await deleteDoc(doc(db,"userPrivate",uid)).catch(()=>{});
+      // 5. users 삭제
+      await deleteDoc(doc(db,"users",uid));
+      // 6. Firebase Auth 삭제 (반드시 마지막)
+      await deleteUser(auth.currentUser);
+      goHome();
+    }catch(e){
+      setWithdrawing(false);
+      if(e.code==="auth/requires-recent-login"){
+        setWithdrawModal(null);
+        alert("보안을 위해 재로그인 후 다시 탈퇴해 주세요.");
+      }else{
+        alert("탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        console.error("[deleteCurrentUser]",e);
+      }
+    }
+  }
   async function hideItem(id,hide){await updateDoc(doc(db,"items",id),{hidden:hide});}
   async function hideJob(id,hide){await updateDoc(doc(db,"jobs",id),{hidden:hide});}
   async function updateReport(id,status){await updateDoc(doc(db,"reports",id),{status});}
@@ -1519,7 +1556,9 @@ export default function App(){
           {/* 하단 버튼 */}
           <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(20px + env(safe-area-inset-bottom, 0px))",borderTop:`0.5px solid ${DIVIDER}`,flexShrink:0,display:"flex",gap:8,background:"#fff"}}>
             <button onClick={()=>toggleLike(selItem.id)} style={{width:50,height:54,borderRadius:14,border:`1px solid ${isLiked?"#e25":"#e8e8e8"}`,background:isLiked?"#fff0f2":"#fff",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><i className="ti ti-heart" style={{color:isLiked?"#e25":"#bbb"}}/></button>
-            {!isOwner&&<button onClick={()=>openChat(selItem.id,selItem.title,selItem.sellerId)} style={{flex:1,height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            {!isOwner&&selItem.seller==="탈퇴한 회원"
+              ?<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#aaa"}}>탈퇴한 회원의 게시물입니다</div>
+              :!isOwner&&<button onClick={()=>openChat(selItem.id,selItem.title,selItem.sellerId)} style={{flex:1,height:54,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {isNanumi?<>🤝 이어받기</>:<><i className="ti ti-message-circle" style={{fontSize:20}}/>채팅하기</>}
             </button>}
             {isOwner&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#aaa"}}>내 게시글입니다</div>}
@@ -1614,7 +1653,9 @@ export default function App(){
           </div>
           {/* 하단 버튼 */}
           <div style={{paddingTop:12,paddingLeft:16,paddingRight:16,paddingBottom:"calc(20px + env(safe-area-inset-bottom, 0px))",borderTop:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
-            {!isOwner
+            {!isOwner&&selJob.org==="탈퇴한 회원"
+              ?<div style={{textAlign:"center",fontSize:13,color:"#aaa",paddingTop:8}}>탈퇴한 회원의 게시물입니다</div>
+              :!isOwner
               ?<button onClick={()=>openChat(selJob.id,selJob.title,selJob.sellerId)} style={{width:"100%",height:54,borderRadius:14,border:"none",background:fs.bg,color:"#fff",fontSize:16,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><i className="ti ti-message-circle" style={{fontSize:22}}/>지원 · 문의하기</button>
               :<div style={{textAlign:"center",fontSize:13,color:"#aaa",paddingTop:8}}>내 공고입니다</div>}
           </div>
@@ -1727,6 +1768,7 @@ export default function App(){
             <div onClick={()=>go("notify","")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><div style={{display:"flex",alignItems:"center",gap:10}}><i className="ti ti-bell" style={{fontSize:18,color:"#555"}}/><span style={{fontSize:14}}>알림 설정</span></div><i className="ti ti-chevron-right" style={{fontSize:16,color:"#ccc"}}/></div>
             <div onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:10,padding:"16px",borderBottom:`0.5px solid ${DIVIDER}`,cursor:"pointer",background:"#fff"}}><i className="ti ti-logout" style={{fontSize:18,color:"#e25"}}/><span style={{fontSize:14,color:"#e25"}}>로그아웃</span></div>
             {isAdmin&&<div onClick={()=>go("admin")} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer"}}><span style={{fontSize:12,color:ADMIN_C,fontWeight:500}}>🔐 관리자 패널</span></div>}
+            <div onClick={()=>setWithdrawModal("confirm1")} style={{padding:"16px",textAlign:"center",cursor:"pointer"}}><span style={{fontSize:12,color:"#bbb"}}>회원 탈퇴</span></div>
           </>)}
           {mypageTab==="liked"&&(likedItems.length===0?<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>찜한 물건이 없어요</div>:likedItems.map(item=>(<div key={item.id} onClick={()=>goDetail(item)} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",cursor:"pointer"}}><div style={{width:64,height:64,borderRadius:10,flexShrink:0,overflow:"hidden",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center"}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:24}}>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:3}}>{item.title}</div><div style={{fontSize:11,color:"#bbb"}}>{item.region}</div><div style={{fontSize:13,fontWeight:500,color:item.price===0?ACCENT:"#1a1a1a",marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.price===0?"무료 나눔":`${item.price?.toLocaleString()}원`}</div></div><button onClick={e=>{e.stopPropagation();toggleLike(item.id,e);}} style={{background:"none",border:"none",cursor:"pointer",color:"#e25",fontSize:18,alignSelf:"center",flexShrink:0}}><i className="ti ti-heart-filled"/></button></div>)))}
           {mypageTab==="myitems"&&(myItems.length===0?<div style={{textAlign:"center",color:"#ccc",marginTop:60,fontSize:14}}>등록한 물건이 없어요</div>:myItems.map(item=>{const isHid=item.hidden===true;return(<div key={item.id} style={{display:"flex",gap:12,padding:"14px 16px",borderBottom:"0.5px solid #f5f5f5",alignItems:"center",opacity:isHid?0.5:1}}><div onClick={()=>goDetail(item)} style={{width:56,height:56,borderRadius:10,flexShrink:0,overflow:"hidden",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:22}}>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>goDetail(item)}><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}><span style={{fontSize:13,fontWeight:500}}>{item.title}</span>{isHid&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:6,background:"#f0f0f0",color:"#888",fontWeight:600}}>잠시 내림</span>}</div><div style={{fontSize:11,color:item.status==="done"?"#9e9e9e":item.status==="reserved"?"#e65100":ACCENT,fontWeight:500}}>{item.status==="done"?"거래완료":item.status==="reserved"?"예약중":"판매중"}</div></div><div style={{display:"flex",gap:6}}>{isHid?<button onClick={()=>hideItem(item.id,false)} style={{background:"#e8f5e9",border:"none",borderRadius:8,padding:"4px 8px",fontSize:11,color:"#2e7d32",cursor:"pointer",fontWeight:500}}>다시 올리기</button>:<><button onClick={()=>boostItem(item.id)} style={{background:LIGHT,border:"none",borderRadius:8,padding:"4px 8px",fontSize:11,color:ACCENT,cursor:"pointer",fontWeight:500}}>⬆</button><button onClick={()=>startEdit(item)} style={{background:"#f5f5f5",border:"none",borderRadius:8,padding:"4px 8px",fontSize:11,color:"#666",cursor:"pointer"}}>수정</button></>}</div></div>);}))}
@@ -2375,6 +2417,34 @@ export default function App(){
         {reportReason==="기타"&&<textarea value={reportDetail} onChange={e=>setReportDetail(e.target.value)} placeholder="신고 사유를 입력해주세요" rows={3} style={{width:"100%",borderRadius:10,border:"0.5px solid #e0e0e0",padding:"10px 12px",fontSize:13,outline:"none",resize:"none",boxSizing:"border-box",marginTop:4,fontFamily:"inherit"}}/>}
         <button onClick={()=>submitReport(reportModal.targetType,reportModal.targetId,reportReason,reportDetail)} disabled={!reportReason} style={{width:"100%",marginTop:14,height:50,borderRadius:14,border:"none",background:reportReason?ACCENT:"#e0e0e0",color:"#fff",fontSize:15,fontWeight:600,cursor:reportReason?"pointer":"default"}}>신고 접수</button>
         <button onClick={()=>setReportModal(null)} style={{width:"100%",marginTop:8,background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer",padding:"6px 0"}}>취소</button>
+      </div></div>)}
+
+      {/* 회원 탈퇴 — 1단계 */}
+      {withdrawModal==="confirm1"&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setWithdrawModal(null)}><div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"28px 20px 32px",width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:17,fontWeight:700,color:"#1a1a1a",marginBottom:14}}>회원 탈퇴</div>
+        <div style={{fontSize:13,color:"#555",lineHeight:1.9,marginBottom:22}}>
+          탈퇴하면 <strong>되돌릴 수 없습니다.</strong><br/>
+          · 개인정보(이름·연락처 등)는 즉시 삭제됩니다<br/>
+          · 게시글은 "탈퇴한 회원"으로 익명 처리됩니다<br/>
+          · 채팅 내역은 상대방 보호를 위해 보존됩니다
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setWithdrawModal(null)} style={{flex:1,height:50,borderRadius:12,border:"1px solid #e0e0e0",background:"#fff",color:"#555",fontSize:14,cursor:"pointer"}}>취소</button>
+          <button onClick={()=>{setWithdrawInput("");setWithdrawModal("confirm2");}} style={{flex:1,height:50,borderRadius:12,border:"none",background:"#e53935",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}>계속</button>
+        </div>
+      </div></div>)}
+
+      {/* 회원 탈퇴 — 2단계 */}
+      {withdrawModal==="confirm2"&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}}><div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"28px 20px 32px",width:"100%",boxSizing:"border-box"}}>
+        <div style={{fontSize:17,fontWeight:700,color:"#1a1a1a",marginBottom:8}}>정말 탈퇴하시겠어요?</div>
+        <div style={{fontSize:13,color:"#888",marginBottom:16}}>계속하려면 아래에 <strong style={{color:"#1a1a1a"}}>탈퇴</strong>를 입력하세요</div>
+        <input value={withdrawInput} onChange={e=>setWithdrawInput(e.target.value)} placeholder="탈퇴" autoFocus style={{width:"100%",height:46,borderRadius:10,border:`1.5px solid ${withdrawInput==="탈퇴"?"#e53935":"#e0e0e0"}`,padding:"0 14px",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:16,fontFamily:"inherit"}}/>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setWithdrawModal(null)} disabled={withdrawing} style={{flex:1,height:50,borderRadius:12,border:"1px solid #e0e0e0",background:"#fff",color:"#555",fontSize:14,cursor:"pointer"}}>취소</button>
+          <button onClick={deleteCurrentUser} disabled={withdrawInput!=="탈퇴"||withdrawing} style={{flex:1,height:50,borderRadius:12,border:"none",background:withdrawInput==="탈퇴"&&!withdrawing?"#e53935":"#f5c6c6",color:"#fff",fontSize:14,fontWeight:600,cursor:withdrawInput==="탈퇴"&&!withdrawing?"pointer":"default"}}>
+            {withdrawing?"처리 중...":"탈퇴하기"}
+          </button>
+        </div>
       </div></div>)}
 
       {/* 거래 후기 */}
