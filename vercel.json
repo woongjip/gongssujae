@@ -1,8 +1,4 @@
 {
-  "functions": {
-    "api/og.js":   { "runtime": "nodejs20.x" },
-    "api/ping.js": { "runtime": "nodejs20.x" }
-  },
   "rewrites": [
     { "source": "/open/:type/:id", "destination": "/index.html" }
   ]
