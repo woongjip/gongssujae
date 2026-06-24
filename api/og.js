@@ -88,7 +88,10 @@ module.exports = async function handler(req, res) {
     var title       = DEFAULT_TITLE;
     var desc        = DEFAULT_DESC;
     var image       = DEFAULT_IMAGE;
-    var redirectUrl = (type && id) ? SITE_URL + '/#/' + type + '/' + id : SITE_URL;
+    // /?p=type/id 형식 → index.html 인라인 스크립트의 qm 분기가
+    // window.__entryHash 설정 + replaceState로 /#/type/id 전환
+    // (기존 카카오 공유 /open/item/xxx 처리 경로와 동일)
+    var redirectUrl = (type && id) ? SITE_URL + '/?p=' + type + '/' + id : SITE_URL;
 
     if (type && id) {
       try {
