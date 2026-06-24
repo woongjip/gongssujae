@@ -1724,8 +1724,18 @@ export default function App(){
       {screen==="notify"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid #f0f0f0",flexShrink:0}}><button onClick={goHome} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}><i className="ti ti-arrow-left"/></button><span style={{fontWeight:500,fontSize:15}}>알림 설정</span></div><div style={{flex:1,minHeight:0,overflowY:"auto",padding:16,paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))"}}>{(()=>{const perm=typeof Notification!=="undefined"?Notification.permission:"default";return perm==="granted"?(<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#e8f5e9",borderRadius:12,marginBottom:14}}><span style={{fontSize:16}}>🔔</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:"#2e7d32"}}>알림이 켜져 있어요</div><div style={{fontSize:11,color:"#4caf50",marginTop:1}}>채팅 메시지 알림을 받을 수 있어요</div></div></div>):perm==="denied"?(<div style={{padding:"12px 14px",background:"#fff3e0",borderRadius:12,marginBottom:14}}><div style={{fontSize:13,fontWeight:600,color:"#e65100",marginBottom:3}}>🔕 알림이 차단되어 있어요</div><div style={{fontSize:11,color:"#888",lineHeight:1.6}}>브라우저 설정 → 사이트 권한에서<br/>twr.or.kr 알림을 허용해주세요</div></div>):(<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:LIGHT,borderRadius:12,marginBottom:14}}><span style={{fontSize:16}}>🔔</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:ACCENT}}>채팅 알림 받기</div><div style={{fontSize:11,color:"#888",marginTop:1}}>메시지를 놓치지 않으려면 알림을 켜주세요</div></div><button onClick={async()=>{const ok=await requestAndRegisterFCM(currentUser?.uid);if(!ok&&Notification.permission==="denied")alert("브라우저 설정에서 알림을 허용해주세요");}} style={{padding:"6px 12px",borderRadius:8,border:"none",background:ACCENT,color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500,flexShrink:0}}>켜기</button></div>);})()}
 <div style={{fontSize:12,color:"#aaa",marginTop:8,lineHeight:1.6}}>채팅 알림 외 키워드·공고 알림은 추후 지원 예정이에요.</div></div></div>)}
 
+      {/* 마이페이지 — 비로그인 */}
+      {screen==="mypage"&&!currentUser&&(
+        <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG,alignItems:"center",justifyContent:"center",padding:"0 32px"}}>
+          <i className="ti ti-user-circle" style={{fontSize:56,color:"#ddd",marginBottom:16}}/>
+          <div style={{fontSize:17,fontWeight:600,color:"#333",marginBottom:8,textAlign:"center"}}>로그인이 필요해요</div>
+          <div style={{fontSize:13,color:"#aaa",textAlign:"center",lineHeight:1.7,marginBottom:32}}>글쓰기·찜·채팅 등 모든 기능을<br/>로그인 후 이용할 수 있어요</div>
+          <button onClick={()=>{setAuthStep("login");setAuthError("");go("auth");}} style={{width:"100%",maxWidth:280,height:50,borderRadius:14,border:"none",background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",marginBottom:10}}>로그인하기</button>
+          <button onClick={()=>{setAuthStep("register");setAuthError("");go("auth");}} style={{width:"100%",maxWidth:280,height:50,borderRadius:14,border:`1px solid ${ACCENT}`,background:"#fff",color:ACCENT,fontSize:14,fontWeight:500,cursor:"pointer"}}>회원가입</button>
+        </div>
+      )}
       {/* 마이페이지 */}
-      {screen==="mypage"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG}}>
+      {screen==="mypage"&&currentUser&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,background:BG}}>
         <div style={{padding:"18px 16px 0",borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
           <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
             <div style={{position:"relative"}}><div style={{width:56,height:56,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22,fontWeight:600}}>{(userProfile?.name||userProfile?.affiliation||"나")[0]}</div>{userProfile?.accountType==="단체"&&<span style={{position:"absolute",bottom:-2,right:-2,fontSize:14}}>🏢</span>}</div>
@@ -2328,6 +2338,16 @@ export default function App(){
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",zIndex:300}} onClick={()=>setShowAppMenu(false)}>
           <div style={{background:"#fff",borderRadius:"20px 20px 0 0",width:"100%",boxSizing:"border-box",paddingBottom:"calc(16px + env(safe-area-inset-bottom,0px))"}} onClick={e=>e.stopPropagation()}>
             <div style={{width:36,height:4,borderRadius:2,background:"#e0e0e0",margin:"14px auto 18px"}}/>
+            {!currentUser&&<>
+              <div onClick={()=>{setShowAppMenu(false);setAuthStep("login");setAuthError("");go("auth");}} style={{display:"flex",alignItems:"center",gap:14,padding:"13px 20px",cursor:"pointer"}}>
+                <div style={{width:34,height:34,borderRadius:10,background:"#fff3e0",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <i className="ti ti-login" style={{fontSize:18,color:"#e65100"}}/>
+                </div>
+                <span style={{fontSize:14,color:"#1a1a1a",fontWeight:500}}>로그인 / 회원가입</span>
+                <i className="ti ti-chevron-right" style={{fontSize:15,color:"#ccc",marginLeft:"auto"}}/>
+              </div>
+              <div style={{height:"0.5px",background:DIVIDER,margin:"4px 0"}}/>
+            </>}
             {[
               {icon:"ti-info-circle",  label:"공쓰재 소개",      action:()=>{go("appinfo");setShowAppMenu(false);}},
               {icon:"ti-book",         label:"이용 안내",         action:()=>{go("guide");setShowAppMenu(false);}},
@@ -2369,7 +2389,7 @@ export default function App(){
           </div>
           채팅
         </button>
-        <button style={tb("mypage")} onClick={()=>{if(!requireLogin("내 정보를 보려면 로그인이 필요해요"))return;go("mypage","mypage");}}><i className="ti ti-user" style={tic("mypage")}/>MY</button>
+        <button style={tb("mypage")} onClick={()=>go("mypage","mypage")}><i className="ti ti-user" style={tic("mypage")}/>MY</button>
       </div>)}
 
       {/* 전체화면 지도 */}
