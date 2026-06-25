@@ -51,7 +51,10 @@ function fetchJson(urlStr) {
   });
 }
 
-function buildHtml(title, desc, image, redirectUrl) {
+// canonicalUrl: og:url에 들어갈 "정식 주소" (/open/item/xxx — 리다이렉트 없는 이 함수 자신)
+// redirectUrl:  실제 사용자를 앱으로 보내는 JS redirect 대상 (/?p=item/xxx)
+// 둘을 분리하지 않으면 FB가 og:url을 따라가 홈 OG를 읽는 문제 발생
+function buildHtml(title, desc, image, canonicalUrl, redirectUrl) {
   return '<!DOCTYPE html>\n<html lang="ko">\n<head>\n' +
     '<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
@@ -63,7 +66,7 @@ function buildHtml(title, desc, image, redirectUrl) {
     '<meta property="og:image" content="' + esc(image) + '">\n' +
     '<meta property="og:image:width" content="1200">\n' +
     '<meta property="og:image:height" content="630">\n' +
-    '<meta property="og:url" content="' + esc(redirectUrl) + '">\n' +
+    '<meta property="og:url" content="' + esc(canonicalUrl) + '">\n' +
     '<meta name="twitter:card" content="summary_large_image">\n' +
     '<meta name="twitter:title" content="' + esc(title) + '">\n' +
     '<meta name="twitter:description" content="' + esc(desc) + '">\n' +
@@ -85,13 +88,13 @@ module.exports = async function handler(req, res) {
       if (m) { type = m[1]; id = m[2]; }
     }
 
-    var title       = DEFAULT_TITLE;
-    var desc        = DEFAULT_DESC;
-    var image       = DEFAULT_IMAGE;
-    // /?p=type/id 형식 → index.html 인라인 스크립트의 qm 분기가
-    // window.__entryHash 설정 + replaceState로 /#/type/id 전환
-    // (기존 카카오 공유 /open/item/xxx 처리 경로와 동일)
-    var redirectUrl = (type && id) ? SITE_URL + '/?p=' + type + '/' + id : SITE_URL;
+    var title        = DEFAULT_TITLE;
+    var desc         = DEFAULT_DESC;
+    var image        = DEFAULT_IMAGE;
+    // canonicalUrl: FB가 og:url을 따라가도 이 함수 자신에 머물러 같은 OG를 읽음
+    var canonicalUrl = (type && id) ? SITE_URL + '/open/' + type + '/' + id : SITE_URL;
+    // redirectUrl: 실제 사용자를 앱 게시글로 보냄 (/?p= 형식은 index.html qm 분기 처리)
+    var redirectUrl  = (type && id) ? SITE_URL + '/?p=' + type + '/' + id : SITE_URL;
 
     if (type && id) {
       try {
@@ -145,7 +148,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    var html = buildHtml(title, desc, image, redirectUrl);
+    var html = buildHtml(title, desc, image, canonicalUrl, redirectUrl);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
     res.end(html);
@@ -154,7 +157,7 @@ module.exports = async function handler(req, res) {
     // 절대로 여기까지 오면 안 되지만, 만약 오면 기본 OG HTML이라도 반환
     console.error('[og] FATAL:', fatal && fatal.message);
     try {
-      var fallbackHtml = buildHtml(DEFAULT_TITLE, DEFAULT_DESC, DEFAULT_IMAGE, SITE_URL);
+      var fallbackHtml = buildHtml(DEFAULT_TITLE, DEFAULT_DESC, DEFAULT_IMAGE, SITE_URL, SITE_URL);
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(fallbackHtml);
     } catch(_) {}
