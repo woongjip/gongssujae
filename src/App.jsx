@@ -2246,7 +2246,7 @@ export default function App(){
       {/* 공유 복사 토스트 */}
       {shareModal&&(()=>{
         const{type,post}=shareModal;
-        const hashUrl=`https://twr.or.kr/#/${type}/${post.id}`;
+        const hashUrl=`https://twr.or.kr/open/${type}/${post.id}`;
         const shareText=type==="item"
           ?`${post.postType==="guhami"?"구함":post.price?`${post.price.toLocaleString()}원`:"나눔"} — ${post.title} | 공쓰재`
           :`${post.field} ${post.jobType==="gujik"?"구직":"구인"} — ${post.title} | 공쓰재`;
