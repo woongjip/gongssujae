@@ -32,7 +32,10 @@ service cloud.firestore {
                                  .hasOnly([request.auth.uid])
                           )
                           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chatCount'])
-                          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
+                          || (
+                            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
+                            && request.resource.data.viewCount == resource.data.viewCount + 1
+                          )
                         )
                       )
                     );
