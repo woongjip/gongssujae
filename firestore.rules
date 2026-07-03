@@ -34,7 +34,7 @@ service cloud.firestore {
                           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chatCount'])
                           || (
                             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
-                            && request.resource.data.viewCount == resource.data.viewCount + 1
+                            && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1
                           )
                         )
                       )

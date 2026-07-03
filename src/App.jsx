@@ -772,7 +772,7 @@ export default function App(){
       try{photos=await uploadPhotosToStorage(data.photos,newRef.id);}
       catch(e){console.error("[submitItem] 사진 업로드 실패:",e);showFormError("사진 업로드에 실패했어요. 다시 시도해주세요.");return;}
       // items 먼저 저장
-      try{await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});}
+      try{await setDoc(newRef,{...data,photos,viewCount:0,createdAt:serverTimestamp()});}
       catch(e){console.error("[submitItem] items 저장 실패:",e);showFormError("저장에 실패했어요. 다시 시도해주세요.");return;}
       // itemPrivate 저장 실패 시 items 롤백
       try{
@@ -849,7 +849,7 @@ export default function App(){
         let photos;
         try{photos=await uploadPhotosToStorage(rawPhotos,newRef.id,"jobs");}
         catch(e){console.error("[submitJob] 사진 업로드 실패:",e);showFormError("사진 업로드에 실패했어요. 다시 시도해주세요.");return;}
-        await setDoc(newRef,{...data,photos,createdAt:serverTimestamp()});
+        await setDoc(newRef,{...data,photos,viewCount:0,createdAt:serverTimestamp()});
       }
     }catch(e){
       console.error("[submitJob]",e);
