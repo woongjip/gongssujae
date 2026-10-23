@@ -16,6 +16,20 @@ function storagePathFromUrl(url){try{const m=url.match(/\/o\/(.+?)(?:\?|$)/);ret
 const NO_SHOW=["공연없음","없음","공연 없음","없음","none","없"];
 const hasShowTag=t=>t&&!NO_SHOW.includes(t.trim());
 const BG="#FAFAF8",DIVIDER="#EDEAE5";
+const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
+// 홈 상단 행사 배너 + 상세 안내. 행사 종료 후 enabled:false 로 내리면 됨 (내용 교체도 여기서)
+const FLEA_MARKET={
+  enabled:true,        // 홈 상단 배너 + 상세 안내 화면
+  popupEnabled:true,   // 첫 진입 팝업 (하루 1회)
+  popupLines:["11/14(토) 12-16시","마로니에공원","나누미 모집 중"],
+  bannerTitle:"🍂 공쓰재 가을 플리마켓 — 나누미 모집 중!",
+  bannerSub:"11/14(토) 12-16시 · 마로니에공원",
+  title:"2026 공쓰재 가을 플리마켓 — 나누미 모집",
+  intro:"공연의 다음 장면을 함께 만들어갈 나누미를 모집합니다!\n공연에 사용된 의상과 소품부터, 공연인의 일상 물품·재능·먹거리까지. 쓰임을 다한 물건에는 새로운 쓰임을, 누군가에게 필요한 물건에는 새로운 주인을 찾아주세요. 나눔과 교환, 판매로 자원의 낭비를 줄이고 공연예술계의 연결을 넓히는 자리, 공쓰재 가을 플리마켓에 함께해요.",
+  info:[["일시","2026년 11월 14일(토) 12:00–16:00"],["장소","아르코예술극장 앞마당 (마로니에공원)"],["모집기간","11월 3일(화)까지"]],
+  applyLabel:"나누미 신청하기",
+  applyUrl:"https://buly.kr/APy0ztA",
+};
 const TAB_ITEM="#228BB5",TAB_JOB="#C8902A",TAB_SPACE="#5B4A8A";
 const ITEM_CATS_ALL=["세트","소품","의상","장비","기타"];
 const ITEM_CATS=["전체",...ITEM_CATS_ALL];
@@ -245,6 +259,14 @@ export default function App(){
   const [addrToast,setAddrToast]=useState(false);
   const [showPWABanner,setShowPWABanner]=useState(false);
   const [showPWAModal,setShowPWAModal]=useState(false);
+  const [showFleaPopup,setShowFleaPopup]=useState(()=>{
+    if(!FLEA_MARKET.popupEnabled)return false;
+    try{return localStorage.getItem("fleaPopupHideDate")!==todayKey();}catch{return true;}
+  });
+  const closeFleaPopup=()=>{
+    setShowFleaPopup(false);
+    try{localStorage.setItem("fleaPopupHideDate",todayKey());}catch{}
+  };
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [showPushModal,setShowPushModal]=useState(false);
   const [showAppMenu,setShowAppMenu]=useState(false);
@@ -1398,6 +1420,13 @@ export default function App(){
           <button onClick={()=>{localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa",padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>
         </div>}
         <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
+          {FLEA_MARKET.enabled&&mainTab!=="spaces"&&<div onClick={()=>go("fleamarket")} style={{margin:"12px 16px 0",padding:"14px 16px",background:"linear-gradient(135deg,#C8782A 0%,#E0A04A 100%)",borderRadius:14,display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:"#fff"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:14,fontWeight:700,lineHeight:1.4,wordBreak:"keep-all"}}>{FLEA_MARKET.bannerTitle}</div>
+              <div style={{fontSize:12,marginTop:3,opacity:0.92}}>{FLEA_MARKET.bannerSub}</div>
+            </div>
+            <i className="ti ti-chevron-right" style={{fontSize:20,flexShrink:0,opacity:0.9}}/>
+          </div>}
           {mainTab==="items"&&nanumiDoneCount>0&&<div style={{margin:"12px 16px 0",padding:"14px 16px",background:LIGHT,borderRadius:14,display:"flex",alignItems:"center",gap:12}}>
             <span style={{fontSize:22,flexShrink:0}}>🌿</span>
             <span style={{fontSize:13,color:ACCENT,fontWeight:500,lineHeight:1.5}}>지금까지 <strong>{nanumiDoneCount}개</strong>가 버려지지 않고<br/>다음 무대를 찾았어요</span>
@@ -1892,8 +1921,8 @@ export default function App(){
       </div>)}
 
       {/* 앱 정보 화면들 */}
-      {["appinfo","guide","notice","contact","terms","privacy"].includes(screen)&&(()=>{
-        const titles={appinfo:"공쓰재 소개",guide:"이용 안내",notice:"공지사항",contact:"문의하기",terms:"이용약관",privacy:"개인정보처리방침"};
+      {["appinfo","guide","notice","contact","terms","privacy","fleamarket"].includes(screen)&&(()=>{
+        const titles={appinfo:"공쓰재 소개",guide:"이용 안내",notice:"공지사항",contact:"문의하기",terms:"이용약관",privacy:"개인정보처리방침",fleamarket:"플리마켓 안내"};
         const Art=({t,children})=>(
           <div style={{marginBottom:24}}>
             <div style={{fontWeight:700,fontSize:14,color:"#1a1a1a",marginBottom:7,paddingBottom:5,borderBottom:`1px solid ${DIVIDER}`}}>{t}</div>
@@ -2229,7 +2258,25 @@ export default function App(){
             ))}
           </div>
         );
-        const bodyContents={terms:termsContent,privacy:privacyContent,appinfo:appinfoContent,guide:guideContent,notice:noticeContent,contact:contactContent};
+        const fleaContent=(
+          <div style={{padding:"20px 20px 120px",maxWidth:640,margin:"0 auto"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#B25E0A",background:"#FEF3E8",display:"inline-block",padding:"3px 10px",borderRadius:10,marginBottom:10}}>🍂 가을 플리마켓</div>
+            <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:16,wordBreak:"keep-all"}}>{FLEA_MARKET.title}</div>
+            <div style={{fontSize:14,color:"#444",lineHeight:1.9,whiteSpace:"pre-line",marginBottom:22}}>{FLEA_MARKET.intro}</div>
+            <div style={{background:"#fff",border:`1px solid ${DIVIDER}`,borderRadius:14,padding:"4px 16px",marginBottom:24}}>
+              {FLEA_MARKET.info.map(([k,v],i)=>(
+                <div key={k} style={{display:"flex",gap:14,padding:"13px 0",borderTop:i?`1px solid ${DIVIDER}`:"none"}}>
+                  <div style={{width:60,flexShrink:0,fontSize:13,fontWeight:600,color:"#B25E0A"}}>{k}</div>
+                  <div style={{flex:1,fontSize:13,color:"#333",lineHeight:1.6}}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"15px",borderRadius:14,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none"}}>
+              {FLEA_MARKET.applyLabel}<i className="ti ti-external-link" style={{fontSize:16}}/>
+            </a>
+          </div>
+        );
+        const bodyContents={terms:termsContent,fleamarket:fleaContent,privacy:privacyContent,appinfo:appinfoContent,guide:guideContent,notice:noticeContent,contact:contactContent};
         return(
           <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
             <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
@@ -2242,6 +2289,21 @@ export default function App(){
           </div>
         );
       })()}
+
+      {/* 플리마켓 첫 진입 팝업 */}
+      {showFleaPopup&&screen==="home"&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,zIndex:310}} onClick={closeFleaPopup}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"relative",width:"100%",maxWidth:340,background:"#fff",borderRadius:20,padding:"30px 24px 18px",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
+          <button onClick={closeFleaPopup} aria-label="닫기" style={{position:"absolute",top:10,right:10,background:"none",border:"none",fontSize:22,color:"#aaa",cursor:"pointer",padding:6}}><i className="ti ti-x"/></button>
+          <div style={{fontSize:40,marginBottom:8}}>🍂</div>
+          <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",marginBottom:14}}>공쓰재 가을 플리마켓</div>
+          <div style={{background:"#FEF3E8",borderRadius:12,padding:"12px 10px",marginBottom:18}}>
+            {FLEA_MARKET.popupLines.map(l=><div key={l} style={{fontSize:14,color:"#8A4B08",fontWeight:500,lineHeight:1.8}}>{l}</div>)}
+          </div>
+          <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"13px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none"}}>{FLEA_MARKET.applyLabel}</a>
+          <button onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{marginTop:8,width:"100%",padding:"10px",background:"none",border:"none",color:ACCENT,fontSize:13,cursor:"pointer"}}>자세히 보기</button>
+          <button onClick={closeFleaPopup} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
+        </div>
+      </div>)}
 
       {/* 공유 복사 토스트 */}
       {shareModal&&(()=>{
