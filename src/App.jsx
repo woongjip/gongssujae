@@ -263,7 +263,8 @@ export default function App(){
     if(!FLEA_MARKET.popupEnabled)return false;
     try{return localStorage.getItem("fleaPopupHideDate")!==todayKey();}catch{return true;}
   });
-  const closeFleaPopup=()=>{
+  const closeFleaPopup=()=>setShowFleaPopup(false); // 이번 세션만 닫기
+  const hideFleaPopupToday=()=>{
     setShowFleaPopup(false);
     try{localStorage.setItem("fleaPopupHideDate",todayKey());}catch{}
   };
@@ -2298,7 +2299,7 @@ export default function App(){
           <img src={FLEA_MARKET.posterUrl} alt="2026 공쓰재 가을 플리마켓 나누미 모집 포스터" onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{display:"block",width:"100%",minHeight:0,flex:"0 1 auto",maxHeight:"calc(100vh - 190px)",objectFit:"contain",background:"#FBF3C9",cursor:"pointer"}}/>
           <div style={{padding:"12px 14px 8px",flexShrink:0}}>
             <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"12px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{FLEA_MARKET.applyLabel}</a>
-            <button onClick={closeFleaPopup} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
+            <button onClick={hideFleaPopupToday} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
           </div>
         </div>
       </div>)}
