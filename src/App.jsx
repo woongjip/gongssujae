@@ -21,7 +21,7 @@ const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${d.getMonth()
 const FLEA_MARKET={
   enabled:true,        // 홈 상단 배너 + 상세 안내 화면
   popupEnabled:true,   // 첫 진입 팝업 (하루 1회)
-  popupLines:["11/14(토) 12-16시","마로니에공원","나누미 모집 중"],
+  posterUrl:"/flea-market-poster.jpg", // public/ 안의 포스터 이미지 (교체 시 파일명만 바꾸면 됨)
   bannerTitle:"🍂 공쓰재 가을 플리마켓 — 나누미 모집 중!",
   bannerSub:"11/14(토) 12-16시 · 마로니에공원",
   title:"2026 공쓰재 가을 플리마켓 — 나누미 모집",
@@ -2260,6 +2260,7 @@ export default function App(){
         );
         const fleaContent=(
           <div style={{padding:"20px 20px 120px",maxWidth:640,margin:"0 auto"}}>
+            {FLEA_MARKET.posterUrl&&<img src={FLEA_MARKET.posterUrl} alt="2026 공쓰재 가을 플리마켓 나누미 모집 포스터" style={{display:"block",width:"100%",borderRadius:12,marginBottom:20,border:`1px solid ${DIVIDER}`}}/>}
             <div style={{fontSize:11,fontWeight:700,color:"#B25E0A",background:"#FEF3E8",display:"inline-block",padding:"3px 10px",borderRadius:10,marginBottom:10}}>🍂 가을 플리마켓</div>
             <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:16,wordBreak:"keep-all"}}>{FLEA_MARKET.title}</div>
             <div style={{fontSize:14,color:"#444",lineHeight:1.9,whiteSpace:"pre-line",marginBottom:22}}>{FLEA_MARKET.intro}</div>
@@ -2292,16 +2293,13 @@ export default function App(){
 
       {/* 플리마켓 첫 진입 팝업 */}
       {showFleaPopup&&screen==="home"&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,zIndex:310}} onClick={closeFleaPopup}>
-        <div onClick={e=>e.stopPropagation()} style={{position:"relative",width:"100%",maxWidth:340,background:"#fff",borderRadius:20,padding:"30px 24px 18px",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
-          <button onClick={closeFleaPopup} aria-label="닫기" style={{position:"absolute",top:10,right:10,background:"none",border:"none",fontSize:22,color:"#aaa",cursor:"pointer",padding:6}}><i className="ti ti-x"/></button>
-          <div style={{fontSize:40,marginBottom:8}}>🍂</div>
-          <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",marginBottom:14}}>공쓰재 가을 플리마켓</div>
-          <div style={{background:"#FEF3E8",borderRadius:12,padding:"12px 10px",marginBottom:18}}>
-            {FLEA_MARKET.popupLines.map(l=><div key={l} style={{fontSize:14,color:"#8A4B08",fontWeight:500,lineHeight:1.8}}>{l}</div>)}
+        <div onClick={e=>e.stopPropagation()} style={{position:"relative",width:"100%",maxWidth:360,maxHeight:"100%",display:"flex",flexDirection:"column",background:"#fff",borderRadius:18,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
+          <button onClick={closeFleaPopup} aria-label="닫기" style={{position:"absolute",top:8,right:8,zIndex:1,width:30,height:30,borderRadius:"50%",background:"rgba(0,0,0,0.45)",border:"none",fontSize:18,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}><i className="ti ti-x"/></button>
+          <img src={FLEA_MARKET.posterUrl} alt="2026 공쓰재 가을 플리마켓 나누미 모집 포스터" onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{display:"block",width:"100%",minHeight:0,flex:"0 1 auto",maxHeight:"calc(100vh - 190px)",objectFit:"contain",background:"#FBF3C9",cursor:"pointer"}}/>
+          <div style={{padding:"12px 14px 8px",flexShrink:0}}>
+            <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"12px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{FLEA_MARKET.applyLabel}</a>
+            <button onClick={closeFleaPopup} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
           </div>
-          <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"13px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none"}}>{FLEA_MARKET.applyLabel}</a>
-          <button onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{marginTop:8,width:"100%",padding:"10px",background:"none",border:"none",color:ACCENT,fontSize:13,cursor:"pointer"}}>자세히 보기</button>
-          <button onClick={closeFleaPopup} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
         </div>
       </div>)}
 
