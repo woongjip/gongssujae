@@ -106,19 +106,19 @@ function loadKakaoSDK(cb){
   poll();
 }
 
-async function resizeImage(file){
+async function resizeImage(file,MAX=600,quality=0.65){
   return new Promise(resolve=>{
     const reader=new FileReader();
     reader.onload=e=>{
       const img=new Image();
       img.onload=()=>{
         const canvas=document.createElement("canvas");
-        const MAX=600;let w=img.width,h=img.height;
+        let w=img.width,h=img.height;
         if(w>h&&w>MAX){h=Math.round(h*MAX/w);w=MAX;}
         else if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
         canvas.width=w;canvas.height=h;
         canvas.getContext("2d").drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL("image/jpeg",0.65));
+        resolve(canvas.toDataURL("image/jpeg",quality));
       };
       img.src=e.target.result;
     };
@@ -310,6 +310,45 @@ export default function App(){
     if(payload.info.length>10){alert("정보 행은 최대 10개예요.");return false;}
     try{await setDoc(doc(db,"config","announcement"),payload);return true;}
     catch(e){console.error("[공쓰재] 공지/행사 저장 실패:",e);alert("저장에 실패했어요. 어드민 권한과 Firestore 규칙 배포 여부를 확인해주세요.");return false;}
+  };
+  // 포스터 교체: 업로드 → 문서 저장 → 옛 파일 삭제 (중간에 실패해도 문서가 깨진 경로를 가리키지 않게 이 순서)
+  const deleteAnnPoster=async path=>{
+    if(!path||!path.startsWith("announcements/"))return;
+    try{await deleteObject(storageRef(storage,path));}catch(e){console.warn("[공쓰재] 옛 포스터 삭제 실패(무시):",e);}
+  };
+  const replaceAnnPoster=async file=>{
+    if(!file)return;
+    if(!file.type.startsWith("image/")){alert("이미지 파일만 올릴 수 있어요.");return;}
+    setAnnSaving(true);
+    let newPath=null;
+    try{
+      const dataUrl=await resizeImage(file,1000,0.82);
+      const blob=await(await fetch(dataUrl)).blob();
+      const safeId=String(ann.id||"event").replace(/[^a-zA-Z0-9_-]/g,"-").slice(0,40);
+      newPath=`announcements/${safeId}-${Date.now()}.jpg`;
+      await uploadBytes(storageRef(storage,newPath),blob);
+      const posterUrl=await getDownloadURL(storageRef(storage,newPath));
+      const oldPath=ann.posterPath;
+      if(await saveAnn({posterUrl,posterPath:newPath})){
+        await deleteAnnPoster(oldPath);
+        setAnnForm(f=>f?{...f,posterUrl,posterPath:newPath}:null);
+      }else await deleteAnnPoster(newPath); // 문서 저장 실패 시 방금 올린 파일 정리
+    }catch(e){
+      console.error("[공쓰재] 포스터 업로드 실패:",e);
+      alert("포스터 업로드에 실패했어요. 어드민 권한과 Storage 규칙 배포 여부를 확인해주세요.");
+      if(newPath)await deleteAnnPoster(newPath);
+    }
+    setAnnSaving(false);
+  };
+  const removeAnnPoster=async()=>{
+    if(!window.confirm("포스터를 삭제할까요? 팝업은 글자만 표시돼요."))return;
+    setAnnSaving(true);
+    const oldPath=ann.posterPath;
+    if(await saveAnn({posterUrl:"",posterPath:""})){
+      await deleteAnnPoster(oldPath);
+      setAnnForm(f=>f?{...f,posterUrl:"",posterPath:""}:null);
+    }
+    setAnnSaving(false);
   };
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [showPushModal,setShowPushModal]=useState(false);
@@ -1965,6 +2004,20 @@ export default function App(){
               <input style={inp} value={f.applyUrl||""} onChange={e=>set({applyUrl:e.target.value})} maxLength={500} placeholder="https://"/>
               <div style={lbl}>종료일 (이 시각이 지나면 팝업·배너 자동 숨김, 비우면 계속 노출)</div>
               <input type="datetime-local" style={inp} value={f.endAtStr||""} onChange={e=>set({endAtStr:e.target.value})}/>
+              <div style={lbl}>포스터 이미지 (선택 즉시 업로드·저장돼요. 아래 입력 중인 글은 "저장"을 눌러야 반영돼요)</div>
+              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                <div style={{width:96,height:136,flexShrink:0,borderRadius:10,border:"0.5px solid #e0e0e0",background:"#f5f5f5",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#aaa",textAlign:"center"}}>
+                  {ann.posterUrl?<img src={ann.posterUrl} alt="현재 포스터" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:"포스터 없음"}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <label style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${ADMIN_C}`,color:ADMIN_C,fontSize:13,cursor:annSaving?"default":"pointer",opacity:annSaving?0.6:1,textAlign:"center"}}>
+                    {annSaving?"처리 중…":ann.posterUrl?"포스터 교체":"포스터 업로드"}
+                    <input type="file" accept="image/*" disabled={annSaving} style={{display:"none"}} onChange={e=>{const fl=e.target.files?.[0];e.target.value="";replaceAnnPoster(fl);}}/>
+                  </label>
+                  {ann.posterUrl&&<button disabled={annSaving} onClick={removeAnnPoster} style={{padding:"9px 14px",borderRadius:10,border:"0.5px solid #e0e0e0",background:"#fff",color:"#c62828",fontSize:12,cursor:"pointer"}}>포스터 삭제</button>}
+                  <div style={{fontSize:11,color:"#aaa",lineHeight:1.5}}>세로 포스터 권장. 폭 1000px로 자동 압축돼요.</div>
+                </div>
+              </div>
               <div style={{display:"flex",gap:8,marginTop:22}}>
                 <button disabled={annSaving} onClick={async()=>{
                   setAnnSaving(true);
@@ -1981,7 +2034,6 @@ export default function App(){
                   if(ok)setAnnForm(null);
                 }} style={{padding:"13px 14px",borderRadius:12,border:`1px solid ${ADMIN_C}`,background:"#fff",color:ADMIN_C,fontSize:13,cursor:"pointer"}}>기본값으로 채우기</button>
               </div>
-              <div style={{fontSize:11,color:"#aaa",marginTop:12,lineHeight:1.6}}>포스터 이미지 교체는 다음 단계에서 추가돼요. 지금은 기존 포스터가 그대로 유지돼요.</div>
             </>);
           })()}
           {adminTab==="reports"&&(()=>{
