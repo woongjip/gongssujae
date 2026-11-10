@@ -18,7 +18,7 @@ const hasShowTag=t=>t&&!NO_SHOW.includes(t.trim());
 const BG="#FAFAF8",DIVIDER="#EDEAE5";
 const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
 // 현재 공지/행사 기본값(fallback). 실제 값은 Firestore config/announcement 가 덮어씀 — 문서가 없거나 읽기 실패 시 이 값 사용
-const FLEA_MARKET={
+const DEFAULT_ANNOUNCEMENT={
   id:"2026-fall-flea", // 행사 식별자: 바뀌면 "오늘 하루 보지 않기"가 풀려 팝업이 다시 뜸
   bannerEnabled:true,  // 홈 상단 배너
   popupEnabled:true,   // 첫 진입 팝업
@@ -262,7 +262,7 @@ export default function App(){
   const [addrToast,setAddrToast]=useState(false);
   const [showPWABanner,setShowPWABanner]=useState(false);
   const [showPWAModal,setShowPWAModal]=useState(false);
-  // 공지/행사 (config/announcement) — FLEA_MARKET 위에 덮어씀
+  // 공지/행사 (config/announcement) — DEFAULT_ANNOUNCEMENT 위에 덮어씀
   const [annDoc,setAnnDoc]=useState(null);
   const [annReady,setAnnReady]=useState(false);
   const [popupClosed,setPopupClosed]=useState(false);
@@ -273,7 +273,7 @@ export default function App(){
       ()=>setAnnReady(true));
     return()=>{clearTimeout(t);unsub();};
   },[]);
-  const ann=useMemo(()=>({...FLEA_MARKET,...(annDoc||{})}),[annDoc]);
+  const ann=useMemo(()=>({...DEFAULT_ANNOUNCEMENT,...(annDoc||{})}),[annDoc]);
   const annEndMs=ann.endAt?.toMillis?ann.endAt.toMillis():null;
   const annActive=!annEndMs||Date.now()<annEndMs;
   const annBannerOn=ann.bannerEnabled&&annActive;
@@ -281,16 +281,44 @@ export default function App(){
     try{
       const v=JSON.parse(localStorage.getItem("annPopupHide")||"null");
       if(v&&v.id===ann.id&&v.date===todayKey())return true;
-      if(ann.id===FLEA_MARKET.id&&localStorage.getItem("fleaPopupHideDate")===todayKey())return true;
+      if(ann.id===DEFAULT_ANNOUNCEMENT.id&&localStorage.getItem("fleaPopupHideDate")===todayKey())return true;
     }catch{}
     return false;
   };
-  const showFleaPopup=annReady&&ann.popupEnabled&&annActive&&!popupClosed&&!popupHiddenToday();
-  const closeFleaPopup=()=>setPopupClosed(true); // 이번 세션만 닫기
-  const hideFleaPopupToday=()=>{
+  const showAnnPopup=annReady&&ann.popupEnabled&&annActive&&!popupClosed&&!popupHiddenToday();
+  const closeAnnPopup=()=>setPopupClosed(true); // 이번 세션만 닫기
+  const hideAnnPopupToday=()=>{
     setPopupClosed(true);
     try{localStorage.setItem("annPopupHide",JSON.stringify({id:ann.id,date:todayKey()}));}catch{}
   };
+  // 배너·팝업 렌더 — 홈과 어드민 미리보기가 같은 함수를 씀
+  const renderAnnBanner=(a,onClick)=>(
+    <div onClick={onClick} style={{margin:"12px 16px 0",padding:"14px 16px",background:"linear-gradient(135deg,#C8782A 0%,#E0A04A 100%)",borderRadius:14,display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:"#fff"}}>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:14,fontWeight:700,lineHeight:1.4,wordBreak:"keep-all"}}>{a.bannerTitle}</div>
+        <div style={{fontSize:12,marginTop:3,opacity:0.92}}>{a.bannerSub}</div>
+      </div>
+      <i className="ti ti-chevron-right" style={{fontSize:20,flexShrink:0,opacity:0.9}}/>
+    </div>
+  );
+  const renderAnnPopup=(a,{onClose,onHideToday,onDetail,onApply,preview})=>(
+    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,zIndex:310}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{position:"relative",width:"100%",maxWidth:360,maxHeight:"100%",display:"flex",flexDirection:"column",background:"#fff",borderRadius:18,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
+        <button onClick={onClose} aria-label="닫기" style={{position:"absolute",top:8,right:8,zIndex:1,width:30,height:30,borderRadius:"50%",background:"rgba(0,0,0,0.45)",border:"none",fontSize:18,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}><i className="ti ti-x"/></button>
+        {a.posterUrl
+          ?<img src={a.posterUrl} alt={a.title} onClick={onDetail} style={{display:"block",width:"100%",minHeight:0,flex:"0 1 auto",maxHeight:"calc(100vh - 190px)",objectFit:"contain",background:"#FBF3C9",cursor:"pointer"}}/>
+          :<div onClick={onDetail} style={{padding:"36px 24px 12px",textAlign:"center",cursor:"pointer",overflowY:"auto"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#B25E0A",marginBottom:8}}>{a.badge}</div>
+            <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:10,wordBreak:"keep-all"}}>{a.title}</div>
+            <div style={{fontSize:14,color:"#555",lineHeight:1.7}}>{a.bannerSub}</div>
+          </div>}
+        <div style={{padding:"12px 14px 8px",flexShrink:0}}>
+          {a.applyUrl&&<a href={preview?undefined:a.applyUrl} target="_blank" rel="noopener noreferrer" onClick={onApply} style={{display:"block",padding:"12px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{a.applyLabel}</a>}
+          <button onClick={onHideToday} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
+        </div>
+      </div>
+    </div>
+  );
   const toLocalInput=ms=>{if(!ms)return "";const d=new Date(ms-new Date(ms).getTimezoneOffset()*60000);return d.toISOString().slice(0,16);};
   // 어드민: 저장된(ann) 값 위에 patch 를 얹어 문서 전체를 기록 (규칙이 필수 필드를 요구하므로 항상 전체 기록)
   const saveAnn=async patch=>{
@@ -380,6 +408,7 @@ export default function App(){
   const [adminTab,setAdminTab]=useState("dashboard");
   const [annForm,setAnnForm]=useState(null); // 어드민 공지/행사 편집 폼
   const [annSaving,setAnnSaving]=useState(false);
+  const [annPreview,setAnnPreview]=useState(null); // "banner" | "popup"
   const [allUsers,setAllUsers]=useState([]);
   const [allUserPrivate,setAllUserPrivate]=useState({});
   const [adminUserQ,setAdminUserQ]=useState("");
@@ -1505,13 +1534,7 @@ export default function App(){
           <button onClick={()=>{localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa",padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>
         </div>}
         <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
-          {annBannerOn&&mainTab!=="spaces"&&<div onClick={()=>go("fleamarket")} style={{margin:"12px 16px 0",padding:"14px 16px",background:"linear-gradient(135deg,#C8782A 0%,#E0A04A 100%)",borderRadius:14,display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:"#fff"}}>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:700,lineHeight:1.4,wordBreak:"keep-all"}}>{ann.bannerTitle}</div>
-              <div style={{fontSize:12,marginTop:3,opacity:0.92}}>{ann.bannerSub}</div>
-            </div>
-            <i className="ti ti-chevron-right" style={{fontSize:20,flexShrink:0,opacity:0.9}}/>
-          </div>}
+          {annBannerOn&&mainTab!=="spaces"&&renderAnnBanner(ann,()=>go("announcement"))}
           {mainTab==="items"&&nanumiDoneCount>0&&<div style={{margin:"12px 16px 0",padding:"14px 16px",background:LIGHT,borderRadius:14,display:"flex",alignItems:"center",gap:12}}>
             <span style={{fontSize:22,flexShrink:0}}>🌿</span>
             <span style={{fontSize:13,color:ACCENT,fontWeight:500,lineHeight:1.5}}>지금까지 <strong>{nanumiDoneCount}개</strong>가 버려지지 않고<br/>다음 무대를 찾았어요</span>
@@ -2018,6 +2041,12 @@ export default function App(){
                   <div style={{fontSize:11,color:"#aaa",lineHeight:1.5}}>세로 포스터 권장. 폭 1000px로 자동 압축돼요.</div>
                 </div>
               </div>
+              <div style={lbl}>미리보기 (저장 전 입력값 기준)</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setAnnPreview(annPreview==="banner"?null:"banner")} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${ADMIN_C}`,background:annPreview==="banner"?ADMIN_C:"#fff",color:annPreview==="banner"?"#fff":ADMIN_C,fontSize:13,cursor:"pointer"}}>배너 미리보기</button>
+                <button onClick={()=>setAnnPreview("popup")} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${ADMIN_C}`,background:"#fff",color:ADMIN_C,fontSize:13,cursor:"pointer"}}>팝업 미리보기</button>
+              </div>
+              {annPreview==="banner"&&<div style={{marginTop:10,marginLeft:-16,marginRight:-16,paddingBottom:14,background:BG,borderRadius:12}}>{renderAnnBanner({...ann,...f},()=>{})}</div>}
               <div style={{display:"flex",gap:8,marginTop:22}}>
                 <button disabled={annSaving} onClick={async()=>{
                   setAnnSaving(true);
@@ -2029,7 +2058,7 @@ export default function App(){
                 <button disabled={annSaving} onClick={async()=>{
                   if(!window.confirm("코드의 기본값으로 모두 덮어쓸까요?"))return;
                   setAnnSaving(true);
-                  const ok=await saveAnn({...FLEA_MARKET});
+                  const ok=await saveAnn({...DEFAULT_ANNOUNCEMENT});
                   setAnnSaving(false);
                   if(ok)setAnnForm(null);
                 }} style={{padding:"13px 14px",borderRadius:12,border:`1px solid ${ADMIN_C}`,background:"#fff",color:ADMIN_C,fontSize:13,cursor:"pointer"}}>기본값으로 채우기</button>
@@ -2084,8 +2113,8 @@ export default function App(){
       </div>)}
 
       {/* 앱 정보 화면들 */}
-      {["appinfo","guide","notice","contact","terms","privacy","fleamarket"].includes(screen)&&(()=>{
-        const titles={appinfo:"공쓰재 소개",guide:"이용 안내",notice:"공지사항",contact:"문의하기",terms:"이용약관",privacy:"개인정보처리방침",fleamarket:"플리마켓 안내"};
+      {["appinfo","guide","notice","contact","terms","privacy","announcement"].includes(screen)&&(()=>{
+        const titles={appinfo:"공쓰재 소개",guide:"이용 안내",notice:"공지사항",contact:"문의하기",terms:"이용약관",privacy:"개인정보처리방침",announcement:"행사 안내"};
         const Art=({t,children})=>(
           <div style={{marginBottom:24}}>
             <div style={{fontWeight:700,fontSize:14,color:"#1a1a1a",marginBottom:7,paddingBottom:5,borderBottom:`1px solid ${DIVIDER}`}}>{t}</div>
@@ -2421,7 +2450,7 @@ export default function App(){
             ))}
           </div>
         );
-        const fleaContent=(
+        const annContent=(
           <div style={{padding:"20px 20px 120px",maxWidth:640,margin:"0 auto"}}>
             {ann.posterUrl&&<img src={ann.posterUrl} alt={ann.title} style={{display:"block",width:"100%",borderRadius:12,marginBottom:20,border:`1px solid ${DIVIDER}`}}/>}
             <div style={{fontSize:11,fontWeight:700,color:"#B25E0A",background:"#FEF3E8",display:"inline-block",padding:"3px 10px",borderRadius:10,marginBottom:10}}>{ann.badge}</div>
@@ -2440,7 +2469,7 @@ export default function App(){
             </a>}
           </div>
         );
-        const bodyContents={terms:termsContent,fleamarket:fleaContent,privacy:privacyContent,appinfo:appinfoContent,guide:guideContent,notice:noticeContent,contact:contactContent};
+        const bodyContents={terms:termsContent,announcement:annContent,privacy:privacyContent,appinfo:appinfoContent,guide:guideContent,notice:noticeContent,contact:contactContent};
         return(
           <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
             <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`0.5px solid ${DIVIDER}`,flexShrink:0,background:"#fff"}}>
@@ -2454,23 +2483,10 @@ export default function App(){
         );
       })()}
 
-      {/* 플리마켓 첫 진입 팝업 */}
-      {showFleaPopup&&screen==="home"&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,zIndex:310}} onClick={closeFleaPopup}>
-        <div onClick={e=>e.stopPropagation()} style={{position:"relative",width:"100%",maxWidth:360,maxHeight:"100%",display:"flex",flexDirection:"column",background:"#fff",borderRadius:18,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
-          <button onClick={closeFleaPopup} aria-label="닫기" style={{position:"absolute",top:8,right:8,zIndex:1,width:30,height:30,borderRadius:"50%",background:"rgba(0,0,0,0.45)",border:"none",fontSize:18,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}><i className="ti ti-x"/></button>
-          {ann.posterUrl
-            ?<img src={ann.posterUrl} alt={ann.title} onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{display:"block",width:"100%",minHeight:0,flex:"0 1 auto",maxHeight:"calc(100vh - 190px)",objectFit:"contain",background:"#FBF3C9",cursor:"pointer"}}/>
-            :<div onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{padding:"36px 24px 12px",textAlign:"center",cursor:"pointer",overflowY:"auto"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#B25E0A",marginBottom:8}}>{ann.badge}</div>
-              <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:10,wordBreak:"keep-all"}}>{ann.title}</div>
-              <div style={{fontSize:14,color:"#555",lineHeight:1.7}}>{ann.bannerSub}</div>
-            </div>}
-          <div style={{padding:"12px 14px 8px",flexShrink:0}}>
-            {ann.applyUrl&&<a href={ann.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"12px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{ann.applyLabel}</a>}
-            <button onClick={hideFleaPopupToday} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
-          </div>
-        </div>
-      </div>)}
+      {/* 공지/행사 첫 진입 팝업 */}
+      {showAnnPopup&&screen==="home"&&renderAnnPopup(ann,{onClose:closeAnnPopup,onHideToday:hideAnnPopupToday,onDetail:()=>{closeAnnPopup();go("announcement");},onApply:()=>closeAnnPopup()})}
+      {/* 어드민 팝업 미리보기 (저장 전 입력값 반영, 링크·저장 없음) */}
+      {annPreview==="popup"&&screen==="admin"&&adminTab==="announce"&&renderAnnPopup({...ann,...(annForm||{})},{onClose:()=>setAnnPreview(null),onHideToday:()=>setAnnPreview(null),onDetail:()=>setAnnPreview(null),onApply:e=>{e.preventDefault();setAnnPreview(null);},preview:true})}
 
       {/* 공유 복사 토스트 */}
       {shareModal&&(()=>{
