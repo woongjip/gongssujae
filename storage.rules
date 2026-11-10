@@ -18,6 +18,18 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
 
+    // 공지/행사 포스터: 누구나 읽기, 어드민만 업로드·삭제 (이미지·5MB 이하)
+    // 어드민 여부는 Firestore users/{uid}.isAdmin 으로 확인 (교차 서비스 규칙)
+    match /announcements/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+                   && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null
+                   && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
     // 나머지 경로는 전부 차단
     match /{allPaths=**} {
       allow read, write: if false;

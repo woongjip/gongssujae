@@ -8,7 +8,7 @@ import {
   setDoc, getDoc, getDocs, where, increment, arrayUnion, arrayRemove,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification, deleteUser,
-  deleteField
+  deleteField, Timestamp
 } from "./firebase";
 
 const ACCENT="#228BB5",LIGHT="#E3F3F9",MID="#3DA1B2",ADMIN_C="#1a237e";
@@ -17,16 +17,19 @@ const NO_SHOW=["공연없음","없음","공연 없음","없음","none","없"];
 const hasShowTag=t=>t&&!NO_SHOW.includes(t.trim());
 const BG="#FAFAF8",DIVIDER="#EDEAE5";
 const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
-// 홈 상단 행사 배너 + 상세 안내. 행사 종료 후 enabled:false 로 내리면 됨 (내용 교체도 여기서)
+// 현재 공지/행사 기본값(fallback). 실제 값은 Firestore config/announcement 가 덮어씀 — 문서가 없거나 읽기 실패 시 이 값 사용
 const FLEA_MARKET={
-  enabled:true,        // 홈 상단 배너 + 상세 안내 화면
-  popupEnabled:true,   // 첫 진입 팝업 (하루 1회)
+  id:"2026-fall-flea", // 행사 식별자: 바뀌면 "오늘 하루 보지 않기"가 풀려 팝업이 다시 뜸
+  bannerEnabled:true,  // 홈 상단 배너
+  popupEnabled:true,   // 첫 진입 팝업
+  endAt:null,          // 이 시각 이후 팝업·배너 자동 숨김 (Firestore Timestamp)
+  badge:"🍂 가을 플리마켓",
   posterUrl:"/flea-market-poster.jpg", // public/ 안의 포스터 이미지 (교체 시 파일명만 바꾸면 됨)
   bannerTitle:"🍂 공쓰재 가을 플리마켓 — 나누미 모집 중!",
   bannerSub:"11/14(토) 12-16시 · 마로니에공원",
   title:"2026 공쓰재 가을 플리마켓 — 나누미 모집",
   intro:"공연의 다음 장면을 함께 만들어갈 나누미를 모집합니다!\n공연에 사용된 의상과 소품부터, 공연인의 일상 물품·재능·먹거리까지. 쓰임을 다한 물건에는 새로운 쓰임을, 누군가에게 필요한 물건에는 새로운 주인을 찾아주세요. 나눔과 교환, 판매로 자원의 낭비를 줄이고 공연예술계의 연결을 넓히는 자리, 공쓰재 가을 플리마켓에 함께해요.",
-  info:[["일시","2026년 11월 14일(토) 12:00–16:00"],["장소","아르코예술극장 앞마당 (마로니에공원)"],["모집기간","11월 3일(화)까지"]],
+  info:[{label:"일시",value:"2026년 11월 14일(토) 12:00–16:00"},{label:"장소",value:"아르코예술극장 앞마당 (마로니에공원)"},{label:"모집기간",value:"11월 3일(화)까지"}],
   applyLabel:"나누미 신청하기",
   applyUrl:"https://buly.kr/APy0ztA",
 };
@@ -259,14 +262,54 @@ export default function App(){
   const [addrToast,setAddrToast]=useState(false);
   const [showPWABanner,setShowPWABanner]=useState(false);
   const [showPWAModal,setShowPWAModal]=useState(false);
-  const [showFleaPopup,setShowFleaPopup]=useState(()=>{
-    if(!FLEA_MARKET.popupEnabled)return false;
-    try{return localStorage.getItem("fleaPopupHideDate")!==todayKey();}catch{return true;}
-  });
-  const closeFleaPopup=()=>setShowFleaPopup(false); // 이번 세션만 닫기
+  // 공지/행사 (config/announcement) — FLEA_MARKET 위에 덮어씀
+  const [annDoc,setAnnDoc]=useState(null);
+  const [annReady,setAnnReady]=useState(false);
+  const [popupClosed,setPopupClosed]=useState(false);
+  useEffect(()=>{
+    const t=setTimeout(()=>setAnnReady(true),3000);
+    const unsub=onSnapshot(doc(db,"config","announcement"),
+      snap=>{setAnnDoc(snap.exists()?snap.data():null);setAnnReady(true);},
+      ()=>setAnnReady(true));
+    return()=>{clearTimeout(t);unsub();};
+  },[]);
+  const ann=useMemo(()=>({...FLEA_MARKET,...(annDoc||{})}),[annDoc]);
+  const annEndMs=ann.endAt?.toMillis?ann.endAt.toMillis():null;
+  const annActive=!annEndMs||Date.now()<annEndMs;
+  const annBannerOn=ann.bannerEnabled&&annActive;
+  const popupHiddenToday=()=>{
+    try{
+      const v=JSON.parse(localStorage.getItem("annPopupHide")||"null");
+      if(v&&v.id===ann.id&&v.date===todayKey())return true;
+      if(ann.id===FLEA_MARKET.id&&localStorage.getItem("fleaPopupHideDate")===todayKey())return true;
+    }catch{}
+    return false;
+  };
+  const showFleaPopup=annReady&&ann.popupEnabled&&annActive&&!popupClosed&&!popupHiddenToday();
+  const closeFleaPopup=()=>setPopupClosed(true); // 이번 세션만 닫기
   const hideFleaPopupToday=()=>{
-    setShowFleaPopup(false);
-    try{localStorage.setItem("fleaPopupHideDate",todayKey());}catch{}
+    setPopupClosed(true);
+    try{localStorage.setItem("annPopupHide",JSON.stringify({id:ann.id,date:todayKey()}));}catch{}
+  };
+  const toLocalInput=ms=>{if(!ms)return "";const d=new Date(ms-new Date(ms).getTimezoneOffset()*60000);return d.toISOString().slice(0,16);};
+  // 어드민: 저장된(ann) 값 위에 patch 를 얹어 문서 전체를 기록 (규칙이 필수 필드를 요구하므로 항상 전체 기록)
+  const saveAnn=async patch=>{
+    const m={...ann,...patch};
+    const endAt=m.endAt instanceof Timestamp?m.endAt:(m.endAt?.toMillis?Timestamp.fromMillis(m.endAt.toMillis()):null);
+    const payload={
+      id:String(m.id||"").trim(),popupEnabled:!!m.popupEnabled,bannerEnabled:!!m.bannerEnabled,
+      badge:m.badge||"",bannerTitle:m.bannerTitle||"",bannerSub:m.bannerSub||"",
+      title:m.title||"",intro:m.intro||"",
+      info:(m.info||[]).filter(r=>r.label||r.value).map(r=>({label:r.label||"",value:r.value||""})),
+      applyLabel:m.applyLabel||"",applyUrl:(m.applyUrl||"").trim(),
+      posterUrl:m.posterUrl||"",posterPath:m.posterPath||"",
+      endAt,updatedAt:serverTimestamp(),updatedBy:currentUser.uid,
+    };
+    if(!payload.id){alert("행사 ID를 입력해주세요.");return false;}
+    if(payload.applyUrl&&!payload.applyUrl.startsWith("https://")){alert("신청 링크는 https:// 로 시작해야 해요.");return false;}
+    if(payload.info.length>10){alert("정보 행은 최대 10개예요.");return false;}
+    try{await setDoc(doc(db,"config","announcement"),payload);return true;}
+    catch(e){console.error("[공쓰재] 공지/행사 저장 실패:",e);alert("저장에 실패했어요. 어드민 권한과 Firestore 규칙 배포 여부를 확인해주세요.");return false;}
   };
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [showPushModal,setShowPushModal]=useState(false);
@@ -296,6 +339,8 @@ export default function App(){
   const [sellerProfile,setSellerProfile]=useState(null);
   const [isAdmin,setIsAdmin]=useState(false);
   const [adminTab,setAdminTab]=useState("dashboard");
+  const [annForm,setAnnForm]=useState(null); // 어드민 공지/행사 편집 폼
+  const [annSaving,setAnnSaving]=useState(false);
   const [allUsers,setAllUsers]=useState([]);
   const [allUserPrivate,setAllUserPrivate]=useState({});
   const [adminUserQ,setAdminUserQ]=useState("");
@@ -1421,10 +1466,10 @@ export default function App(){
           <button onClick={()=>{localStorage.setItem('pwaInstallDismissed','1');setShowPWABanner(false);}} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa",padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>
         </div>}
         <div ref={listRef} style={{flex:1,minHeight:0,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom, 0px))",background:BG}}>
-          {FLEA_MARKET.enabled&&mainTab!=="spaces"&&<div onClick={()=>go("fleamarket")} style={{margin:"12px 16px 0",padding:"14px 16px",background:"linear-gradient(135deg,#C8782A 0%,#E0A04A 100%)",borderRadius:14,display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:"#fff"}}>
+          {annBannerOn&&mainTab!=="spaces"&&<div onClick={()=>go("fleamarket")} style={{margin:"12px 16px 0",padding:"14px 16px",background:"linear-gradient(135deg,#C8782A 0%,#E0A04A 100%)",borderRadius:14,display:"flex",alignItems:"center",gap:10,cursor:"pointer",color:"#fff"}}>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:700,lineHeight:1.4,wordBreak:"keep-all"}}>{FLEA_MARKET.bannerTitle}</div>
-              <div style={{fontSize:12,marginTop:3,opacity:0.92}}>{FLEA_MARKET.bannerSub}</div>
+              <div style={{fontSize:14,fontWeight:700,lineHeight:1.4,wordBreak:"keep-all"}}>{ann.bannerTitle}</div>
+              <div style={{fontSize:12,marginTop:3,opacity:0.92}}>{ann.bannerSub}</div>
             </div>
             <i className="ti ti-chevron-right" style={{fontSize:20,flexShrink:0,opacity:0.9}}/>
           </div>}
@@ -1864,7 +1909,7 @@ export default function App(){
       {/* 관리자 */}
       {screen==="admin"&&(<div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
         <div style={{padding:"14px 16px",background:ADMIN_C,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}><div><div style={{fontSize:15,fontWeight:600,color:"#fff"}}>🔐 관리자 모드</div><div style={{fontSize:11,color:"rgba(255,255,255,0.6)",marginTop:1}}>공쓰재 Admin</div></div><button onClick={()=>{goHome();}} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:12,cursor:"pointer"}}>나가기</button></div>
-        <div style={{display:"flex",background:"#f8f9ff",borderBottom:"0.5px solid #e0e0e0",flexShrink:0}}>{[["dashboard","대시보드"],["users","회원"],["posts","게시글"],["stats","통계"],["reports","신고"]].map(([t,l])=>(<button key={t} onClick={()=>setAdminTab(t)} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:11,fontWeight:adminTab===t?600:400,color:adminTab===t?ADMIN_C:"#888",borderBottom:adminTab===t?`2px solid ${ADMIN_C}`:"2px solid transparent"}}>{l}{t==="reports"&&reports.filter(r=>r.status==="pending").length>0&&<span style={{marginLeft:3,fontSize:9,background:"#e25",color:"#fff",borderRadius:8,padding:"1px 4px"}}>{reports.filter(r=>r.status==="pending").length}</span>}</button>))}</div>
+        <div style={{display:"flex",background:"#f8f9ff",borderBottom:"0.5px solid #e0e0e0",flexShrink:0}}>{[["dashboard","대시보드"],["users","회원"],["posts","게시글"],["stats","통계"],["announce","공지/행사"],["reports","신고"]].map(([t,l])=>(<button key={t} onClick={()=>setAdminTab(t)} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:11,fontWeight:adminTab===t?600:400,color:adminTab===t?ADMIN_C:"#888",borderBottom:adminTab===t?`2px solid ${ADMIN_C}`:"2px solid transparent"}}>{l}{t==="reports"&&reports.filter(r=>r.status==="pending").length>0&&<span style={{marginLeft:3,fontSize:9,background:"#e25",color:"#fff",borderRadius:8,padding:"1px 4px"}}>{reports.filter(r=>r.status==="pending").length}</span>}</button>))}</div>
         <div style={{flex:1,minHeight:0,overflowY:"auto",padding:16}}>
           {adminTab==="dashboard"&&(<>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}><StatCard label="총 회원" value={adminStats.totalUsers} color={ADMIN_C}/><StatCard label="활성 회원" value={adminStats.activeUsers} color="#2e7d32"/><StatCard label="총 게시글" value={adminStats.totalItems}/><StatCard label="거래완료" value={adminStats.doneItems} color="#e65100"/><StatCard label="일자리" value={adminStats.totalJobs}/><StatCard label="신고" value={adminStats.reports} color={adminStats.reports>0?"#c62828":"#9e9e9e"}/></div>
@@ -1874,6 +1919,71 @@ export default function App(){
           {adminTab==="users"&&(<><input value={adminUserQ} onChange={e=>setAdminUserQ(e.target.value)} placeholder="이름 또는 소속 검색" style={{...inp,marginBottom:14}}/><div style={{fontSize:12,color:"#aaa",marginBottom:8}}>총 {filtAdminUsers.length}명</div>{filtAdminUsers.map(u=>(<div key={u.id} style={{padding:"12px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{u.accountType==="단체"?"🏢":"👤"}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500}}>{u.name||u.affiliation||"미입력"}<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>{u.accountType}</span></div><div style={{fontSize:11,color:"#888"}}>{allUserPrivate[u.id]?.email||""}</div>{allUserPrivate[u.id]?.phone&&<div style={{fontSize:11,color:"#555",marginTop:1}}>📞 {allUserPrivate[u.id].phone}</div>}<div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>👏 앙코르 {u.encoreCount||0}회</span>{u.isAdmin&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#fff3e0",color:"#e65100",fontWeight:600}}>👑 어드민</span>}<span style={{fontSize:10,color:"#aaa"}}>{u.affiliation||"소속 미입력"}</span></div></div><div style={{display:"flex",gap:5,flexShrink:0}}>{u.id!==currentUser?.uid&&<button onClick={()=>toggleAdminRole(u.id)} style={{background:u.isAdmin?"#fff3e0":"#f5f5f5",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.isAdmin?"#e65100":"#666",cursor:"pointer",fontWeight:500}}>{u.isAdmin?"어드민 해제":"👑 지정"}</button>}{u.id!==currentUser?.uid&&<button onClick={()=>{const msg=u.status==="suspended"?"이 회원을 활성화하시겠어요?":"이 회원을 정지하시겠어요?";if(window.confirm(msg))toggleUserStatus(u.id);}} style={{background:u.status==="suspended"?"#e8f5e9":"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:u.status==="suspended"?"#2e7d32":"#c62828",cursor:"pointer",fontWeight:500}}>{u.status==="suspended"?"활성화":"정지"}</button>}</div></div></div>))}</>)}
           {adminTab==="posts"&&(<><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:10}}>중고 물건 ({items.length})</div>{[...items].sort((a,b)=>(b.viewCount||0)-(a.viewCount||0)).map(item=>(<div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.photos?.length>0?<img src={item.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} alt=""/>:<span>{item.emoji||"📦"}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{item.title}<span style={{fontSize:10,color:(item.viewCount||0)>0?"#555":"#ccc",marginLeft:6,fontWeight:400}}>👁 {item.viewCount||0}</span></div><div style={{fontSize:11,color:"#aaa"}}>{item.seller} · {item.region}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteItem(item.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}<div style={{fontSize:12,color:"#aaa",fontWeight:500,marginTop:16,marginBottom:10}}>일자리 공고 ({jobs.length})</div>{jobs.map(job=>(<div key={job.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"0.5px solid #f5f5f5"}}><div style={{width:36,height:36,borderRadius:8,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{job.icon}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,marginBottom:1}}>{job.title}</div><div style={{fontSize:11,color:"#aaa"}}>{job.org} · {job.location}</div></div><button onClick={()=>{if(window.confirm("정말 삭제하시겠어요?\n되돌릴 수 없어요."))deleteJob(job.id);}} style={{background:"#ffebee",border:"none",borderRadius:8,padding:"5px 8px",fontSize:11,color:"#c62828",cursor:"pointer",flexShrink:0}}>삭제</button></div>))}</>)}
           {adminTab==="stats"&&(<><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📦 카테고리별</div><BarChart data={catStats}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>📍 지역별</div><BarChart data={regionStats} color={ADMIN_C}/></div><div style={{marginBottom:20}}><div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:12}}>🏷 나누미 / 구하미</div>{(()=>{const nan=items.filter(i=>i.postType==="nanumi").length;const gu=items.filter(i=>i.postType==="guhami").length;const tot=nan+gu||1;return(<div><div style={{display:"flex",height:20,borderRadius:10,overflow:"hidden",marginBottom:8}}><div style={{width:`${(nan/tot)*100}%`,background:ACCENT}}/><div style={{width:`${(gu/tot)*100}%`,background:"#c62828"}}/></div><div style={{display:"flex",gap:16,fontSize:12}}><span style={{color:ACCENT}}>■ 나누미 {nan}개</span><span style={{color:"#c62828"}}>■ 구하미 {gu}개</span></div></div>);})()}</div></>)}
+          {adminTab==="announce"&&(()=>{
+            const f=annForm||{...ann,endAtStr:toLocalInput(annEndMs),info:(ann.info||[]).map(r=>({...r}))};
+            const set=patch=>setAnnForm({...f,...patch});
+            const lbl={fontSize:12,color:"#666",fontWeight:500,marginBottom:4,marginTop:14};
+            const toggle=(k,label)=>(
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:"#fff",border:"0.5px solid #e0e0e0",borderRadius:12,marginBottom:8}}>
+                <span style={{fontSize:14,fontWeight:500}}>{label}</span>
+                <button disabled={annSaving} onClick={async()=>{const v=!ann[k];setAnnSaving(true);const ok=await saveAnn({[k]:v});setAnnSaving(false);if(ok&&annForm)setAnnForm({...annForm,[k]:v});}} style={{width:46,height:26,borderRadius:13,border:"none",cursor:"pointer",position:"relative",background:ann[k]?ACCENT:"#ccc",transition:"background .15s"}}>
+                  <span style={{position:"absolute",top:3,left:ann[k]?23:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .15s"}}/>
+                </button>
+              </div>
+            );
+            return(<>
+              <div style={{fontSize:12,color:"#aaa",marginBottom:12,lineHeight:1.6}}>
+                {annDoc?"저장하면 앱에 바로 반영돼요.":"아직 저장된 값이 없어요. 지금은 코드의 기본값이 쓰이는 중이에요."}
+                {annEndMs&&!annActive&&<span style={{color:"#c62828"}}> · 종료일이 지나 팝업·배너가 숨겨진 상태예요.</span>}
+              </div>
+              {toggle("popupEnabled","첫 진입 팝업")}
+              {toggle("bannerEnabled","홈 상단 배너")}
+              <div style={lbl}>행사 ID (바꾸면 "오늘 하루 보지 않기"가 풀려 팝업이 다시 떠요)</div>
+              <input style={inp} value={f.id||""} onChange={e=>set({id:e.target.value})} maxLength={64}/>
+              <div style={lbl}>뱃지 (상세 화면 상단)</div>
+              <input style={inp} value={f.badge||""} onChange={e=>set({badge:e.target.value})} maxLength={40}/>
+              <div style={lbl}>배너 제목</div>
+              <input style={inp} value={f.bannerTitle||""} onChange={e=>set({bannerTitle:e.target.value})} maxLength={100}/>
+              <div style={lbl}>배너 부제 (일시·장소 등)</div>
+              <input style={inp} value={f.bannerSub||""} onChange={e=>set({bannerSub:e.target.value})} maxLength={100}/>
+              <div style={lbl}>상세 제목</div>
+              <input style={inp} value={f.title||""} onChange={e=>set({title:e.target.value})} maxLength={120}/>
+              <div style={lbl}>상세 본문</div>
+              <textarea style={{...inp,minHeight:140,resize:"vertical",lineHeight:1.6,fontFamily:"inherit"}} value={f.intro||""} onChange={e=>set({intro:e.target.value})} maxLength={3000}/>
+              <div style={lbl}>정보 행 (일시·장소·모집기간 등, 최대 10개)</div>
+              {f.info.map((r,i)=>(
+                <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
+                  <input style={{...inp,width:80,flexShrink:0}} placeholder="항목" value={r.label} onChange={e=>set({info:f.info.map((x,j)=>j===i?{...x,label:e.target.value}:x)})}/>
+                  <input style={inp} placeholder="내용" value={r.value} onChange={e=>set({info:f.info.map((x,j)=>j===i?{...x,value:e.target.value}:x)})}/>
+                  <button onClick={()=>set({info:f.info.filter((_,j)=>j!==i)})} style={{background:"none",border:"none",color:"#c62828",fontSize:18,cursor:"pointer",padding:"0 4px"}}><i className="ti ti-x"/></button>
+                </div>
+              ))}
+              {f.info.length<10&&<button onClick={()=>set({info:[...f.info,{label:"",value:""}]})} style={{fontSize:12,color:ACCENT,background:"none",border:`1px dashed ${ACCENT}`,borderRadius:10,padding:"7px 12px",cursor:"pointer"}}>+ 행 추가</button>}
+              <div style={lbl}>신청 버튼 문구</div>
+              <input style={inp} value={f.applyLabel||""} onChange={e=>set({applyLabel:e.target.value})} maxLength={30}/>
+              <div style={lbl}>신청 링크 (https:// 로 시작, 비우면 버튼 숨김)</div>
+              <input style={inp} value={f.applyUrl||""} onChange={e=>set({applyUrl:e.target.value})} maxLength={500} placeholder="https://"/>
+              <div style={lbl}>종료일 (이 시각이 지나면 팝업·배너 자동 숨김, 비우면 계속 노출)</div>
+              <input type="datetime-local" style={inp} value={f.endAtStr||""} onChange={e=>set({endAtStr:e.target.value})}/>
+              <div style={{display:"flex",gap:8,marginTop:22}}>
+                <button disabled={annSaving} onClick={async()=>{
+                  setAnnSaving(true);
+                  const ms=f.endAtStr?new Date(f.endAtStr).getTime():null;
+                  const ok=await saveAnn({...f,endAt:ms?Timestamp.fromMillis(ms):null});
+                  setAnnSaving(false);
+                  if(ok){setAnnForm(null);alert("저장했어요. 앱에 바로 반영돼요.");}
+                }} style={{flex:1,padding:"13px",borderRadius:12,border:"none",background:ADMIN_C,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",opacity:annSaving?0.6:1}}>{annSaving?"저장 중…":"저장"}</button>
+                <button disabled={annSaving} onClick={async()=>{
+                  if(!window.confirm("코드의 기본값으로 모두 덮어쓸까요?"))return;
+                  setAnnSaving(true);
+                  const ok=await saveAnn({...FLEA_MARKET});
+                  setAnnSaving(false);
+                  if(ok)setAnnForm(null);
+                }} style={{padding:"13px 14px",borderRadius:12,border:`1px solid ${ADMIN_C}`,background:"#fff",color:ADMIN_C,fontSize:13,cursor:"pointer"}}>기본값으로 채우기</button>
+              </div>
+              <div style={{fontSize:11,color:"#aaa",marginTop:12,lineHeight:1.6}}>포스터 이미지 교체는 다음 단계에서 추가돼요. 지금은 기존 포스터가 그대로 유지돼요.</div>
+            </>);
+          })()}
           {adminTab==="reports"&&(()=>{
             const stLabel={pending:"검토중",resolved:"처리완료",rejected:"반려"};
             const stStyle={pending:{bg:"#ffebee",col:"#c62828"},resolved:{bg:"#e8f5e9",col:"#2e7d32"},rejected:{bg:"#f5f5f5",col:"#9e9e9e"}};
@@ -2261,21 +2371,21 @@ export default function App(){
         );
         const fleaContent=(
           <div style={{padding:"20px 20px 120px",maxWidth:640,margin:"0 auto"}}>
-            {FLEA_MARKET.posterUrl&&<img src={FLEA_MARKET.posterUrl} alt="2026 공쓰재 가을 플리마켓 나누미 모집 포스터" style={{display:"block",width:"100%",borderRadius:12,marginBottom:20,border:`1px solid ${DIVIDER}`}}/>}
-            <div style={{fontSize:11,fontWeight:700,color:"#B25E0A",background:"#FEF3E8",display:"inline-block",padding:"3px 10px",borderRadius:10,marginBottom:10}}>🍂 가을 플리마켓</div>
-            <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:16,wordBreak:"keep-all"}}>{FLEA_MARKET.title}</div>
-            <div style={{fontSize:14,color:"#444",lineHeight:1.9,whiteSpace:"pre-line",marginBottom:22}}>{FLEA_MARKET.intro}</div>
+            {ann.posterUrl&&<img src={ann.posterUrl} alt={ann.title} style={{display:"block",width:"100%",borderRadius:12,marginBottom:20,border:`1px solid ${DIVIDER}`}}/>}
+            <div style={{fontSize:11,fontWeight:700,color:"#B25E0A",background:"#FEF3E8",display:"inline-block",padding:"3px 10px",borderRadius:10,marginBottom:10}}>{ann.badge}</div>
+            <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:16,wordBreak:"keep-all"}}>{ann.title}</div>
+            <div style={{fontSize:14,color:"#444",lineHeight:1.9,whiteSpace:"pre-line",marginBottom:22}}>{ann.intro}</div>
             <div style={{background:"#fff",border:`1px solid ${DIVIDER}`,borderRadius:14,padding:"4px 16px",marginBottom:24}}>
-              {FLEA_MARKET.info.map(([k,v],i)=>(
-                <div key={k} style={{display:"flex",gap:14,padding:"13px 0",borderTop:i?`1px solid ${DIVIDER}`:"none"}}>
+              {(ann.info||[]).map(({label:k,value:v},i)=>(
+                <div key={i} style={{display:"flex",gap:14,padding:"13px 0",borderTop:i?`1px solid ${DIVIDER}`:"none"}}>
                   <div style={{width:60,flexShrink:0,fontSize:13,fontWeight:600,color:"#B25E0A"}}>{k}</div>
                   <div style={{flex:1,fontSize:13,color:"#333",lineHeight:1.6}}>{v}</div>
                 </div>
               ))}
             </div>
-            <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"15px",borderRadius:14,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none"}}>
-              {FLEA_MARKET.applyLabel}<i className="ti ti-external-link" style={{fontSize:16}}/>
-            </a>
+            {ann.applyUrl&&<a href={ann.applyUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"15px",borderRadius:14,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none"}}>
+              {ann.applyLabel}<i className="ti ti-external-link" style={{fontSize:16}}/>
+            </a>}
           </div>
         );
         const bodyContents={terms:termsContent,fleamarket:fleaContent,privacy:privacyContent,appinfo:appinfoContent,guide:guideContent,notice:noticeContent,contact:contactContent};
@@ -2296,9 +2406,15 @@ export default function App(){
       {showFleaPopup&&screen==="home"&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,zIndex:310}} onClick={closeFleaPopup}>
         <div onClick={e=>e.stopPropagation()} style={{position:"relative",width:"100%",maxWidth:360,maxHeight:"100%",display:"flex",flexDirection:"column",background:"#fff",borderRadius:18,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
           <button onClick={closeFleaPopup} aria-label="닫기" style={{position:"absolute",top:8,right:8,zIndex:1,width:30,height:30,borderRadius:"50%",background:"rgba(0,0,0,0.45)",border:"none",fontSize:18,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}><i className="ti ti-x"/></button>
-          <img src={FLEA_MARKET.posterUrl} alt="2026 공쓰재 가을 플리마켓 나누미 모집 포스터" onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{display:"block",width:"100%",minHeight:0,flex:"0 1 auto",maxHeight:"calc(100vh - 190px)",objectFit:"contain",background:"#FBF3C9",cursor:"pointer"}}/>
+          {ann.posterUrl
+            ?<img src={ann.posterUrl} alt={ann.title} onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{display:"block",width:"100%",minHeight:0,flex:"0 1 auto",maxHeight:"calc(100vh - 190px)",objectFit:"contain",background:"#FBF3C9",cursor:"pointer"}}/>
+            :<div onClick={()=>{closeFleaPopup();go("fleamarket");}} style={{padding:"36px 24px 12px",textAlign:"center",cursor:"pointer",overflowY:"auto"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#B25E0A",marginBottom:8}}>{ann.badge}</div>
+              <div style={{fontSize:19,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:10,wordBreak:"keep-all"}}>{ann.title}</div>
+              <div style={{fontSize:14,color:"#555",lineHeight:1.7}}>{ann.bannerSub}</div>
+            </div>}
           <div style={{padding:"12px 14px 8px",flexShrink:0}}>
-            <a href={FLEA_MARKET.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"12px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{FLEA_MARKET.applyLabel}</a>
+            {ann.applyUrl&&<a href={ann.applyUrl} target="_blank" rel="noopener noreferrer" onClick={closeFleaPopup} style={{display:"block",padding:"12px",borderRadius:12,background:ACCENT,color:"#fff",fontSize:15,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{ann.applyLabel}</a>}
             <button onClick={hideFleaPopupToday} style={{marginTop:2,width:"100%",padding:"8px",background:"none",border:"none",color:"#999",fontSize:12,cursor:"pointer"}}>오늘 하루 보지 않기</button>
           </div>
         </div>

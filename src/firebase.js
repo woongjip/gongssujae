@@ -3,7 +3,7 @@ import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, getDocs, increment, deleteField,
-  arrayUnion, arrayRemove
+  arrayUnion, arrayRemove, Timestamp
 } from "firebase/firestore";
 import {
   getAuth, createUserWithEmailAndPassword,
@@ -92,7 +92,7 @@ export {
   collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, query, orderBy, serverTimestamp,
   setDoc, getDoc, where, getDocs, increment, deleteField,
-  arrayUnion, arrayRemove,
+  arrayUnion, arrayRemove, Timestamp,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification, deleteUser,
 };

@@ -127,6 +127,34 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // config/announcement: 현재 공지/행사(팝업·배너·상세) — 누구나 읽기, 어드민만 쓰기
+    function validAnnouncement(d) {
+      return d.keys().hasOnly([
+               'id','popupEnabled','bannerEnabled','badge','bannerTitle','bannerSub',
+               'title','intro','info','applyLabel','applyUrl','posterUrl','posterPath',
+               'endAt','updatedAt','updatedBy'])
+          && d.id is string && d.id.size() > 0 && d.id.size() <= 64
+          && d.popupEnabled is bool
+          && d.bannerEnabled is bool
+          && d.badge is string && d.badge.size() <= 40
+          && d.bannerTitle is string && d.bannerTitle.size() <= 100
+          && d.bannerSub is string && d.bannerSub.size() <= 100
+          && d.title is string && d.title.size() <= 120
+          && d.intro is string && d.intro.size() <= 3000
+          && d.info is list && d.info.size() <= 10
+          && d.applyLabel is string && d.applyLabel.size() <= 30
+          && d.applyUrl is string && d.applyUrl.size() <= 500
+          && (d.applyUrl == '' || d.applyUrl.matches('https://.*'))
+          && d.get('posterUrl', '') is string && d.get('posterUrl', '').size() <= 1000
+          && d.get('posterPath', '') is string && d.get('posterPath', '').size() <= 300
+          && (d.get('endAt', null) == null || d.get('endAt', null) is timestamp);
+    }
+    match /config/announcement {
+      allow read: if true;
+      allow create, update: if isAdmin() && validAnnouncement(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
     // 나머지 차단
     match /{document=**} {
       allow read, write: if false;
