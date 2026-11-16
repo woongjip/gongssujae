@@ -875,7 +875,19 @@ export default function App(){
     }));
   }
 
-  async function submitItem(){
+  // 중복 제출 방지: state 는 비동기라 연타 시 둘 다 통과하므로 ref 로 즉시 잠금, 버튼 비활성화는 state 로
+  const submittingRef=useRef(false);
+  const [submitting,setSubmitting]=useState(false);
+  async function guardedSubmit(fn){
+    if(submittingRef.current)return;
+    submittingRef.current=true;setSubmitting(true);
+    try{await fn();}
+    finally{submittingRef.current=false;setSubmitting(false);}
+  }
+  const submitItem=()=>guardedSubmit(submitItemImpl);
+  const submitJob=()=>guardedSubmit(submitJobImpl);
+
+  async function submitItemImpl(){
     if(!form.title){showFormError("제목을 입력해주세요");return;}
     if(form.listingMode==="sale"&&!form.price){showFormError("판매 가격을 입력해주세요");return;}
     if(form.listingMode==="sale"&&parseInt(form.price)>100000000){showFormError("가격은 1억원 이하로 입력해주세요");return;}
@@ -966,7 +978,7 @@ export default function App(){
     setReviewModal(null);
   }
 
-  async function submitJob(){
+  async function submitJobImpl(){
     if(!jform.title){showFormError("공고 제목을 입력해주세요");return;}
     if(!currentUser)return;
     const wasEditing=!!editJob;
@@ -1865,7 +1877,7 @@ export default function App(){
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>연락처</div><input value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} placeholder="010-0000-0000" style={{...inp,marginBottom:6}}/><label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"#666"}}><input type="checkbox" checked={form.safeNum} onChange={e=>setForm(p=>({...p,safeNum:e.target.checked}))}/>안심번호로 표시하기</label></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>거래 희망 장소</div><div style={{display:"flex",gap:6}}><input value={form.tradePlace} onChange={e=>setForm(p=>({...p,tradePlace:e.target.value,tradeLat:null,tradeLng:null}))} placeholder="예: 대학로 마로니에공원 앞" style={{...inp,flex:1}}/><button type="button" onClick={()=>{setShowMapPicker(true);loadKakaoSDK(()=>setMapPickerLoaded(true));}} style={{flexShrink:0,padding:"0 12px",borderRadius:10,border:`1px solid ${ACCENT}`,background:LIGHT,color:ACCENT,fontSize:12,cursor:"pointer",fontWeight:500,whiteSpace:"nowrap"}}>📍 지도 선택</button></div>{form.tradeLat&&<div style={{fontSize:11,color:ACCENT,marginTop:4}}>📍 위치 선택 완료</div>}</div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>설명</div><textarea value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="물건 상태, 주의사항 등" rows={3} style={{...inp,resize:"none"}}/></div>
-              <button onClick={submitItem} style={{width:"100%",height:46,borderRadius:12,border:"none",background:form.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:80}}>{editItem?"수정 완료":"올리기"}</button>
+              <button onClick={submitItem} disabled={submitting} style={{width:"100%",height:46,borderRadius:12,border:"none",background:form.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:submitting?"default":"pointer",marginBottom:80,opacity:submitting?0.6:1}}>{submitting?"저장 중…":editItem?"수정 완료":"올리기"}</button>
             </>
           ):(
             <>
@@ -1876,7 +1888,7 @@ export default function App(){
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>공고 내용</div><textarea value={jform.desc} onChange={e=>setJform(p=>({...p,desc:e.target.value}))} placeholder="모집 조건, 담당 업무 등" rows={3} style={{...inp,resize:"none"}}/></div>
               <div style={{marginBottom:12}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>분야</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["조명","무대","음향","분장","영상","기타"].map(f=>(<button key={f} onClick={()=>setJform(p=>({...p,field:f}))} style={{padding:"5px 12px",borderRadius:20,border:"0.5px solid",borderColor:jform.field===f?ACCENT:"#e0e0e0",background:jform.field===f?ACCENT:"#fff",color:jform.field===f?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{f}</button>))}</div></div>
               <div style={{marginBottom:14}}><div style={{fontSize:12,color:"#666",marginBottom:4,fontWeight:500}}>고용 형태</div><div style={{display:"flex",gap:6}}>{["단기","장기"].map(t=>(<button key={t} onClick={()=>setJform(p=>({...p,type:t}))} style={{padding:"5px 16px",borderRadius:20,border:"0.5px solid",borderColor:jform.type===t?ACCENT:"#e0e0e0",background:jform.type===t?ACCENT:"#fff",color:jform.type===t?"#fff":"#555",fontSize:12,cursor:"pointer"}}>{t}</button>))}</div></div>
-              <button onClick={submitJob} style={{width:"100%",height:46,borderRadius:12,border:"none",background:jform.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:"pointer",marginBottom:80}}>{editJob?"수정 완료":"공고 올리기"}</button>
+              <button onClick={submitJob} disabled={submitting} style={{width:"100%",height:46,borderRadius:12,border:"none",background:jform.title?ACCENT:"#ddd",color:"#fff",fontSize:15,fontWeight:500,cursor:submitting?"default":"pointer",marginBottom:80,opacity:submitting?0.6:1}}>{submitting?"저장 중…":editJob?"수정 완료":"공고 올리기"}</button>
             </>
           )}
           {posted&&<div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:ACCENT,color:"#fff",padding:"12px 24px",borderRadius:14,fontSize:14,fontWeight:500,zIndex:200}}>✓ 완료!</div>}
